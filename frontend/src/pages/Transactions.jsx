@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react'
 import api, { errMsg, fmtIDR } from '../lib/api.js'
 import { Badge, Button, Card, Input, Modal, Select } from '../components/ui.jsx'
+import TransactionModal from '../components/TransactionModal.jsx'
 
 const KIND_META = {
   expense: { label: 'Pengeluaran', color: '#f43f5e' },
   income: { label: 'Pemasukan', color: '#10b981' },
   transfer: { label: 'Pindah Dana', color: '#6366f1' }
-}
-
-const emptyForm = {
-  kind: 'expense',
-  amount: '',
-  date: new Date().toISOString().slice(0, 10),
-  category_id: '',
-  account_id: '',
-  to_account_id: '',
-  note: ''
 }
 
 export default function Transactions() {
@@ -24,7 +15,6 @@ export default function Transactions() {
   const [accounts, setAccounts] = useState([])
   const [filters, setFilters] = useState({ month: '', kind: '', category_id: '', account_id: '' })
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState(emptyForm)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [err, setErr] = useState('')
@@ -59,59 +49,25 @@ export default function Transactions() {
     loadTransactions()
   }, [filters.month, filters.kind, filters.category_id, filters.account_id])
 
-  const kindCats = categories.filter((c) => c.kind === form.kind)
+  // reload when a transaction is created from the global navbar FAB
+  useEffect(() => {
+    const handler = () => loadTransactions()
+    window.addEventListener('tx-changed', handler)
+    return () => window.removeEventListener('tx-changed', handler)
+  }, [filters.month, filters.kind, filters.category_id, filters.account_id])
 
   const setFilter = (k, v) => setFilters((f) => ({ ...f, [k]: v }))
 
   const openAdd = () => {
     setEditing(null)
-    setForm({ ...emptyForm })
     setErr('')
     setModalOpen(true)
   }
 
   const openEdit = (t) => {
     setEditing(t)
-    setForm({
-      kind: t.kind,
-      amount: t.amount,
-      date: t.date,
-      category_id: t.category_id ?? '',
-      account_id: t.account_id,
-      to_account_id: t.to_account_id ?? '',
-      note: t.note || ''
-    })
     setErr('')
     setModalOpen(true)
-  }
-
-  const setKind = (kind) => {
-    if (kind === 'transfer') {
-      setForm({ ...form, kind, category_id: '', to_account_id: form.account_id || '' })
-    } else {
-      setForm({ ...form, kind, to_account_id: '' })
-    }
-  }
-
-  const submit = async (e) => {
-    e.preventDefault()
-    const payload = {
-      kind: form.kind,
-      amount: Number(form.amount),
-      date: form.date,
-      account_id: Number(form.account_id),
-      to_account_id: form.kind === 'transfer' && form.to_account_id ? Number(form.to_account_id) : null,
-      category_id: form.category_id ? Number(form.category_id) : null,
-      note: form.note || null
-    }
-    try {
-      if (editing) await api.patch(`/transactions/${editing.id}`, payload)
-      else await api.post('/transactions', payload)
-      setModalOpen(false)
-      loadTransactions()
-    } catch (e2) {
-      setErr(errMsg(e2))
-    }
   }
 
   const confirmDelete = async () => {
@@ -123,8 +79,6 @@ export default function Transactions() {
       alert(errMsg(e2))
     }
   }
-
-  const toOptions = accounts.filter((a) => String(a.id) !== String(form.account_id))
 
   const accountCell = (t) => {
     if (t.kind === 'transfer') {
@@ -258,64 +212,15 @@ export default function Transactions() {
         )}
       </Card>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Transaksi' : 'Tambah Transaksi'}>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => setKind('expense')}
-              className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'expense' ? 'bg-rose-600 text-white' : 'border border-slate-300 text-slate-600'}`}
-            >
-              Pengeluaran
-            </button>
-            <button
-              type="button"
-              onClick={() => setKind('income')}
-              className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'income' ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-slate-600'}`}
-            >
-              Pemasukan
-            </button>
-            <button
-              type="button"
-              onClick={() => setKind('transfer')}
-              className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'transfer' ? 'bg-indigo-600 text-white' : 'border border-slate-300 text-slate-600'}`}
-            >
-              Pindah Dana
-            </button>
-          </div>
-          <Input label="Nominal (Rp)" type="number" min="0" step="500" required placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-          <Input label="Tanggal" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          {form.kind === 'transfer' ? (
-            <>
-              <Select label="Dari Akun" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
-                <option value="">Pilih akun asal...</option>
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </Select>
-              <Select label="Ke Akun" required value={form.to_account_id} onChange={(e) => setForm({ ...form, to_account_id: e.target.value })}>
-                <option value="">Pilih akun tujuan...</option>
-                {toOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </Select>
-            </>
-          ) : (
-            <>
-              <Select label="Akun (wajib)" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
-                <option value="">Pilih akun...</option>
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </Select>
-              <Select label="Kategori" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
-                <option value="">Tanpa kategori</option>
-                {kindCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
-            </>
-          )}
-          <Input label="Catatan (opsional)" placeholder={form.kind === 'transfer' ? 'cth: Transfer ke OVO' : 'cth: Makan siang'} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-          {err && <p className="text-sm text-rose-600">{err}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
-            <Button type="submit">{editing ? 'Simpan Perubahan' : 'Simpan'}</Button>
-          </div>
-        </form>
-      </Modal>
+      <TransactionModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        editing={editing}
+        onSaved={() => {
+          setModalOpen(false)
+          loadTransactions()
+        }}
+      />
 
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Hapus Transaksi">
         <p className="text-sm text-slate-600">Yakin mau menghapus transaksi ini?</p>

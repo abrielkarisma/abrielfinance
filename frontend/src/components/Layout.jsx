@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
-import { cn } from './ui.jsx'
+import { Button, cn } from './ui.jsx'
+import TransactionModal from './TransactionModal.jsx'
 
 const primaryLinks = [
   { to: '/', label: 'Dashboard', icon: '▦' },
@@ -19,6 +20,7 @@ export default function Layout() {
   const loc = useLocation()
   const [masterOpen, setMasterOpen] = useState(() => /^\/(accounts|categories)(\/|$)/.test(loc.pathname))
   const [mobileSheet, setMobileSheet] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
 
   const masterActive = masterLinks.some((l) => loc.pathname.startsWith(l.to))
   useEffect(() => {
@@ -28,6 +30,12 @@ export default function Layout() {
   const doLogout = () => {
     logout()
     nav('/login')
+  }
+
+  const onSaved = () => {
+    setAddOpen(false)
+    window.dispatchEvent(new Event('tx-changed'))
+    nav('/transactions')
   }
 
   return (
@@ -40,6 +48,11 @@ export default function Layout() {
             <div className="text-sm font-bold">Keuangan</div>
             <div className="text-xs text-slate-500">Pribadi</div>
           </div>
+        </div>
+        <div className="px-3 pb-3">
+          <Button onClick={() => setAddOpen(true)} className="w-full">
+            + Tambah Transaksi
+          </Button>
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {primaryLinks.map((l) => (
@@ -129,6 +142,18 @@ export default function Layout() {
 
       {/* Bottom nav: mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {/* Center FAB for add transaction */}
+        <button
+          onClick={() => setAddOpen(true)}
+          className="absolute left-1/2 -top-7 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5"
+        >
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white shadow-lg ring-4 ring-white">
+            +
+          </span>
+          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shadow">
+            Tambah
+          </span>
+        </button>
         <div className="grid grid-cols-4">
           {primaryLinks.map((l) => (
             <NavLink
@@ -181,6 +206,8 @@ export default function Layout() {
           </div>
         </div>
       )}
+
+      <TransactionModal open={addOpen} onClose={() => setAddOpen(false)} onSaved={onSaved} />
     </div>
   )
 }
