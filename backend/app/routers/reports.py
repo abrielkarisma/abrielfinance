@@ -1,12 +1,18 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from ..db import get_db
-from ..models import Transaction, User
-from ..schemas import CategoryOut, CategoryTotal, MonthlySummary
+from ..models import Account, Transaction, User
+from ..schemas import (
+    AccountBalance,
+    AccountOut,
+    AccountsSummary,
+    CategoryOut,
+    CategoryTotal,
+    MonthlySummary,
+)
 from ..security import get_current_user
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -65,4 +71,42 @@ def summary(
         total_expense=float(expense),
         balance=float(income - expense),
         by_category=by_category,
+    )
+
+
+@router.get("/accounts", response_model=AccountsSummary)
+def accounts_summary(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    accounts = (
+        db.query(Account)
+        .filter(Account.user_id == user.id)
+        .order_by(Account.created_at)
+        .all()
+    )
+    txns = db.query(Transaction).filter(Transaction.user_id == user.id).all()
+
+    by_acc: dict[int, dict[str, float]] = {}
+    for t in txns:
+        d = by_acc.setdefault(t.account_id, {"income": 0.0, "expense": 0.0})
+        d[t.kind] += float(t.amount)
+
+    rows = []
+    for a in accounts:
+        d = by_acc.get(a.id, {"income": 0.0, "expense": 0.0})
+        balance = float(a.opening_balance) + d["income"] - d["expense"]
+        rows.append(
+            AccountBalance(
+                account=AccountOut.model_validate(a),
+                opening_balance=float(a.opening_balance),
+                total_income=d["income"],
+                total_expense=d["expense"],
+                balance=balance,
+            )
+        )
+
+    return AccountsSummary(
+        accounts=rows,
+        total_balance=sum(r.balance for r in rows),
     )

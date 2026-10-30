@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [summary, setSummary] = useState(null)
   const [recent, setRecent] = useState([])
+  const [accts, setAccts] = useState([])
 
   useEffect(() => {
     const [y, m] = month.split('-').map(Number)
@@ -18,7 +19,12 @@ export default function Dashboard() {
     api.get('/transactions', { params: { limit: 6 } }).then((r) => setRecent(r.data)).catch(() => {})
   }, [month])
 
+  useEffect(() => {
+    api.get('/reports/accounts').then((r) => setAccts(r.data.accounts)).catch(() => {})
+  }, [])
+
   const expenseByCat = (summary?.by_category || []).filter((c) => c.category?.kind === 'expense')
+  const totalBal = accts.reduce((s, a) => s + a.balance, 0)
 
   const compare = [
     { name: 'Pemasukan', value: summary?.total_income || 0, fill: INCOME_COLOR },
@@ -39,20 +45,50 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="border-l-4" style={{ borderLeftColor: INCOME_COLOR }}>
-          <p className="text-sm text-slate-500">Pemasukan</p>
+          <p className="text-sm text-slate-500">Pemasukan (bulan ini)</p>
           <p className="mt-1 text-2xl font-bold text-emerald-600">{fmtIDR(summary?.total_income)}</p>
         </Card>
         <Card className="border-l-4" style={{ borderLeftColor: EXPENSE_COLOR }}>
-          <p className="text-sm text-slate-500">Pengeluaran</p>
+          <p className="text-sm text-slate-500">Pengeluaran (bulan ini)</p>
           <p className="mt-1 text-2xl font-bold text-rose-600">{fmtIDR(summary?.total_expense)}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-500">Saldo</p>
+          <p className="text-sm text-slate-500">Saldo bulan ini</p>
           <p className={`mt-1 text-2xl font-bold ${(summary?.balance ?? 0) >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
             {fmtIDR(summary?.balance)}
           </p>
         </Card>
       </div>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">Saldo per Akun</h2>
+        {accts.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">Belum ada akun.</p>
+        ) : (
+          <>
+            <ul className="divide-y divide-slate-100">
+              {accts.map((r) => (
+                <li key={r.account.id} className="flex items-center justify-between py-2.5">
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.account.color }} />
+                    {r.account.name}
+                    <span className="text-xs text-slate-400">({r.account.type === 'cash' ? 'Tunai' : r.account.type === 'ewallet' ? 'E-Wallet' : 'Bank'})</span>
+                  </span>
+                  <span className={`text-sm font-semibold ${r.balance >= 0 ? 'text-slate-800' : 'text-rose-600'}`}>
+                    {fmtIDR(r.balance)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+              <span className="text-sm font-medium text-slate-500">Total Saldo</span>
+              <span className={`text-base font-bold ${totalBal >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
+                {fmtIDR(totalBal)}
+              </span>
+            </div>
+          </>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
@@ -114,9 +150,10 @@ export default function Dashboard() {
           <div className="divide-y divide-slate-100">
             {recent.map((t) => (
               <div key={t.id} className="flex items-center justify-between py-2.5">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <Badge color="#94a3b8">Tanpa kategori</Badge>}
-                  <span className="text-sm text-slate-600">{t.note || t.kind === 'income' ? 'Pemasukan' : 'Pengeluaran'}</span>
+                  {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
+                  <span className="text-sm text-slate-600">{t.note || (t.kind === 'income' ? 'Pemasukan' : 'Pengeluaran')}</span>
                 </div>
                 <div className="text-right">
                   <div className={`text-sm font-semibold ${t.kind === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>

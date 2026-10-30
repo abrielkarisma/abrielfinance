@@ -40,6 +40,31 @@ class ChangePassword(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class AccountCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    type: str = Field(default="bank", pattern="^(bank|ewallet|cash)$")
+    color: str = "#64748b"
+    opening_balance: float = Field(default=0, ge=0)
+
+
+class AccountUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    type: Optional[str] = Field(default=None, pattern="^(bank|ewallet|cash)$")
+    color: Optional[str] = None
+    opening_balance: Optional[float] = Field(default=None, ge=0)
+
+
+class AccountOut(BaseModel):
+    id: int
+    name: str
+    type: str
+    color: str
+    opening_balance: float
+
+    class Config:
+        from_attributes = True
+
+
 class CategoryCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     kind: str = Field(pattern="^(expense|income)$")
@@ -69,6 +94,7 @@ class TransactionCreate(BaseModel):
     kind: str = Field(pattern="^(expense|income)$")
     amount: float = Field(gt=0)
     date: date
+    account_id: int
     category_id: Optional[int] = None
     note: Optional[str] = Field(default=None, max_length=500)
 
@@ -77,6 +103,7 @@ class TransactionUpdate(BaseModel):
     kind: Optional[str] = Field(default=None, pattern="^(expense|income)$")
     amount: Optional[float] = Field(default=None, gt=0)
     date: Optional[date] = None
+    account_id: Optional[int] = None
     category_id: Optional[int] = None
     note: Optional[str] = Field(default=None, max_length=500)
 
@@ -86,8 +113,10 @@ class TransactionOut(BaseModel):
     kind: str
     amount: float
     date: date
+    account_id: int
     category_id: Optional[int] = None
     note: Optional[str] = None
+    account: Optional[AccountOut] = None
     category: Optional[CategoryOut] = None
 
     class Config:
@@ -104,3 +133,16 @@ class MonthlySummary(BaseModel):
     total_expense: float
     balance: float
     by_category: list[CategoryTotal]
+
+
+class AccountBalance(BaseModel):
+    account: AccountOut
+    opening_balance: float
+    total_income: float
+    total_expense: float
+    balance: float
+
+
+class AccountsSummary(BaseModel):
+    accounts: list[AccountBalance]
+    total_balance: float

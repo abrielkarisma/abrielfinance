@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from . import models  # noqa: F401 — daftarkan model ke metadata
 from .db import Base, engine
-from .routers import auth, categories, reports, transactions
+from .routers import accounts, auth, categories, reports, transactions
 
 DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -37,6 +37,7 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 
 app.include_router(auth.router)
+app.include_router(accounts.router)
 app.include_router(categories.router)
 app.include_router(transactions.router)
 app.include_router(reports.router)

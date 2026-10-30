@@ -5,7 +5,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Category, User
+from ..models import Account, Category, User
 from ..schemas import (
     ChangePassword,
     LoginRequest,
@@ -49,6 +49,21 @@ def _seed_default_categories(db: Session, user: User) -> None:
     db.commit()
 
 
+def _seed_default_account(db: Session, user: User) -> None:
+    if db.query(Account).filter(Account.user_id == user.id).count():
+        return
+    db.add(
+        Account(
+            user_id=user.id,
+            name="Tunai",
+            type="cash",
+            color="#64748b",
+            opening_balance=0,
+        )
+    )
+    db.commit()
+
+
 @router.post("/register", response_model=Token, status_code=201)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
     exists = db.query(User).filter(User.email == payload.email).first()
@@ -63,6 +78,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     _seed_default_categories(db, user)
+    _seed_default_account(db, user)
     return Token(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),

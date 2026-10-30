@@ -5,6 +5,7 @@ import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Transactions from './pages/Transactions.jsx'
+import Accounts from './pages/Accounts.jsx'
 import Categories from './pages/Categories.jsx'
 
 function Protected({ children }) {
@@ -28,6 +29,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="transactions" element={<Transactions />} />
+          <Route path="accounts" element={<Accounts />} />
           <Route path="categories" element={<Categories />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

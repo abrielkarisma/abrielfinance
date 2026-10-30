@@ -21,6 +21,24 @@ class User(Base):
     categories = relationship(
         "Category", back_populates="user", cascade="all, delete-orphan"
     )
+    accounts = relationship(
+        "Account", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    type: Mapped[str] = mapped_column(String(20), default="bank")  # bank | ewallet | cash
+    color: Mapped[str] = mapped_column(String(20), default="#64748b")
+    opening_balance: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="accounts")
+    transactions = relationship("Transaction", back_populates="account")
 
 
 class Category(Base):
@@ -43,6 +61,7 @@ class Transaction(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
@@ -53,4 +72,5 @@ class Transaction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="transactions")
+    account = relationship("Account", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")

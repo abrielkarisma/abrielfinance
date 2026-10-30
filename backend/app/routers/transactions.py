@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Category, Transaction, User
+from ..models import Account, Category, Transaction, User
 from ..schemas import TransactionCreate, TransactionOut, TransactionUpdate
 from ..security import get_current_user
 
@@ -18,11 +18,18 @@ def _get_owned(db: Session, user: User, tx_id: int) -> Transaction:
     return tx
 
 
+def _check_account(db: Session, user: User, account_id: int) -> None:
+    acc = db.get(Account, account_id)
+    if not acc or acc.user_id != user.id:
+        raise HTTPException(status_code=400, detail="Akun tidak valid")
+
+
 @router.get("", response_model=list[TransactionOut])
 def list_transactions(
     start: date | None = None,
     end: date | None = None,
     category_id: int | None = None,
+    account_id: int | None = None,
     kind: str | None = None,
     limit: int = 100,
     user: User = Depends(get_current_user),
@@ -35,6 +42,8 @@ def list_transactions(
         q = q.filter(Transaction.date <= end)
     if category_id:
         q = q.filter(Transaction.category_id == category_id)
+    if account_id:
+        q = q.filter(Transaction.account_id == account_id)
     if kind:
         q = q.filter(Transaction.kind == kind)
     return q.order_by(Transaction.date.desc(), Transaction.id.desc()).limit(limit).all()
@@ -46,6 +55,7 @@ def create_transaction(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    _check_account(db, user, payload.account_id)
     if payload.category_id is not None:
         cat = db.get(Category, payload.category_id)
         if not cat or cat.user_id != user.id or cat.kind != payload.kind:
@@ -67,6 +77,8 @@ def update_transaction(
     tx = _get_owned(db, user, transaction_id)
     data = payload.model_dump(exclude_unset=True)
     kind = data.get("kind", tx.kind)
+    if data.get("account_id") is not None:
+        _check_account(db, user, data["account_id"])
     if data.get("category_id") is not None:
         cat = db.get(Category, data["category_id"])
         if not cat or cat.user_id != user.id or cat.kind != kind:
