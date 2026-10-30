@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg } from '../lib/api.js'
 import { Button, Card, Input, Modal } from '../components/ui.jsx'
+import { toast } from '../components/toast.jsx'
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 const WORKDAYS = [0, 1, 2, 3, 4]
@@ -17,6 +18,8 @@ export default function Reminders() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [err, setErr] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [busy, setBusy] = useState(null)
   const [notifPerm, setNotifPerm] = useState(() =>
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   )
@@ -56,6 +59,8 @@ export default function Reminders() {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (saving) return
+    setSaving(true)
     const payload = {
       title: form.title.trim(),
       note: form.note || null,
@@ -66,27 +71,44 @@ export default function Reminders() {
     try {
       if (editing) await api.patch(`/reminders/${editing.id}`, payload)
       else await api.post('/reminders', payload)
+      toast.success(editing ? 'Pengingat berhasil diperbarui' : 'Pengingat berhasil ditambahkan')
       setModalOpen(false)
       load()
       loadDue()
     } catch (e) {
       setErr(errMsg(e))
+      toast.error(errMsg(e))
+    } finally {
+      setSaving(false)
     }
   }
 
   const toggleEnabled = async (r) => {
+    if (busy === r.id) return
+    setBusy(r.id)
     try {
       await api.patch(`/reminders/${r.id}`, { enabled: !r.enabled })
       load(); loadDue()
-    } catch {}
+    } catch {
+      toast.error('Gagal mengubah status pengingat')
+    } finally {
+      setBusy(null)
+    }
   }
 
   const remove = async (r) => {
+    if (busy === r.id) return
     if (!window.confirm(`Hapus pengingat "${r.title}"?`)) return
+    setBusy(r.id)
     try {
       await api.delete(`/reminders/${r.id}`)
       load(); loadDue()
-    } catch {}
+      toast.success('Pengingat berhasil dihapus')
+    } catch {
+      toast.error('Gagal menghapus pengingat')
+    } finally {
+      setBusy(null)
+    }
   }
 
   const requestPerm = () => {
@@ -171,6 +193,7 @@ export default function Reminders() {
                     <input
                       type="checkbox"
                       checked={r.enabled}
+                      disabled={busy === r.id}
                       onChange={() => toggleEnabled(r)}
                       className="h-4 w-4 accent-emerald-600"
                     />
@@ -254,7 +277,7 @@ export default function Reminders() {
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
-            <Button type="submit">Simpan</Button>
+            <Button type="submit" loading={saving}>Simpan</Button>
           </div>
         </form>
       </Modal>

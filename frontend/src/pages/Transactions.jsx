@@ -1,22 +1,36 @@
 import { useEffect, useState } from 'react'
+import { Pencil, ReceiptText, Trash2 } from 'lucide-react'
 import api, { errMsg, fmtIDR } from '../lib/api.js'
-import { Badge, Button, Card, Input, Modal, Select } from '../components/ui.jsx'
+import { Badge, Button, Card, Modal, Select } from '../components/ui.jsx'
 import TransactionModal from '../components/TransactionModal.jsx'
+import { toast } from '../components/toast.jsx'
 
 const KIND_META = {
-  expense: { label: 'Pengeluaran', color: '#f43f5e' },
-  income: { label: 'Pemasukan', color: '#10b981' },
-  transfer: { label: 'Pindah Dana', color: '#6366f1' }
+  expense: { label: 'Pengeluaran', color: '#c41c29' },
+  income: { label: 'Pemasukan', color: '#2f7a45' },
+  transfer: { label: 'Pindah Dana', color: '#4f46e5' }
 }
+const AMOUNT_CLASS = {
+  income: 'text-up',
+  expense: 'text-slate-800',
+  transfer: 'text-transfer'
+}
+const inputCls = 'rounded-[10px] border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/15'
+
+const fmtDT = (t) => `${t.date}${t.time ? ` · ${t.time}` : ''}`
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([])
   const [categories, setCategories] = useState([])
   const [accounts, setAccounts] = useState([])
   const [filters, setFilters] = useState({ month: '', kind: '', category_id: '', account_id: '' })
+  const pageSize = 10
+  const [page, setPage] = useState(1)
+  const [totalTxs, setTotalTxs] = useState(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [deletingBusy, setDeletingBusy] = useState(false)
   const [err, setErr] = useState('')
 
   const loadTransactions = () => {
@@ -29,7 +43,12 @@ export default function Transactions() {
     if (filters.kind) params.kind = filters.kind
     if (filters.category_id) params.category_id = filters.category_id
     if (filters.account_id) params.account_id = filters.account_id
-    api.get('/transactions', { params }).then((r) => setTransactions(r.data)).catch(() => {})
+    params.limit = pageSize
+    params.offset = (page - 1) * pageSize
+    api.get('/transactions', { params }).then((r) => {
+      setTransactions(r.data.items)
+      setTotalTxs(r.data.total)
+    }).catch(() => {})
   }
 
   const loadCategories = (kind) => {
@@ -47,14 +66,21 @@ export default function Transactions() {
 
   useEffect(() => {
     loadTransactions()
+    
+  }, [filters.month, filters.kind, filters.category_id, filters.account_id, page])
+
+  
+  useEffect(() => {
+    setPage(1)
   }, [filters.month, filters.kind, filters.category_id, filters.account_id])
 
-  // reload when a transaction is created from the global navbar FAB
+  
   useEffect(() => {
     const handler = () => loadTransactions()
     window.addEventListener('tx-changed', handler)
     return () => window.removeEventListener('tx-changed', handler)
-  }, [filters.month, filters.kind, filters.category_id, filters.account_id])
+    
+  }, [filters.month, filters.kind, filters.category_id, filters.account_id, page])
 
   const setFilter = (k, v) => setFilters((f) => ({ ...f, [k]: v }))
 
@@ -71,12 +97,17 @@ export default function Transactions() {
   }
 
   const confirmDelete = async () => {
+    if (!deleting || deletingBusy) return
+    setDeletingBusy(true)
     try {
       await api.delete(`/transactions/${deleting.id}`)
       setDeleting(null)
       loadTransactions()
+      toast.success('Transaksi berhasil dihapus')
     } catch (e2) {
-      alert(errMsg(e2))
+      toast.error(errMsg(e2))
+    } finally {
+      setDeletingBusy(false)
     }
   }
 
@@ -93,11 +124,22 @@ export default function Transactions() {
     return t.account ? <Badge color={t.account.color}>{t.account.name}</Badge> : <span className="text-slate-400">—</span>
   }
 
+  const emptyState = (
+    <div className="flex flex-col items-center gap-2 py-14 text-center md:py-16">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+        <ReceiptText size={20} />
+      </span>
+      <p className="text-sm text-slate-400">Tidak ada transaksi yang cocok.</p>
+    </div>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Transaksi</h1>
-        <Button onClick={openAdd}>+ Tambah Transaksi</Button>
+        <div>
+          <h1 className="text-xl font-bold md:text-2xl">Transaksi</h1>
+          <p className="text-sm text-slate-400">{totalTxs} catatan</p>
+        </div>
       </div>
 
       <Card>
@@ -106,7 +148,7 @@ export default function Transactions() {
             type="month"
             value={filters.month}
             onChange={(e) => setFilter('month', e.target.value)}
-            className="col-span-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 lg:w-44"
+            className={`${inputCls} col-span-2 lg:w-44`}
           />
           <Select label="Jenis" value={filters.kind} onChange={(e) => setFilter('kind', e.target.value)} className="sm:w-40">
             <option value="">Semua Jenis</option>
@@ -127,15 +169,16 @@ export default function Transactions() {
 
       <Card className="p-0 md:p-5">
         {transactions.length === 0 ? (
-          <p className="py-12 text-center text-sm text-slate-400 md:py-16">Tidak ada transaksi yang cocok.</p>
+          emptyState
         ) : (
           <>
             <ul className="divide-y divide-slate-100 md:hidden">
               {transactions.map((t) => (
                 <li key={t.id} className="px-5 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-slate-400">{t.date}</span>
+                    <span className="text-xs text-slate-400">{fmtDT(t)}</span>
                     <div className="flex flex-wrap justify-end gap-1.5">
+                      <Badge color={KIND_META[t.kind]?.color || '#94a3b8'}>{KIND_META[t.kind]?.label || t.kind}</Badge>
                       {t.kind === 'transfer' ? (
                         <>
                           {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
@@ -152,13 +195,17 @@ export default function Transactions() {
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <span className="truncate text-sm text-slate-600">{t.note || KIND_META[t.kind]?.label || t.kind}</span>
-                    <span className={`text-sm font-semibold ${t.kind === 'income' ? 'text-emerald-600' : t.kind === 'expense' ? 'text-rose-600' : 'text-indigo-600'}`}>
+                    <span className={`text-sm font-semibold ${AMOUNT_CLASS[t.kind]}`}>
                       {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
                     </span>
                   </div>
-                  <div className="mt-1 flex gap-3">
-                    <button onClick={() => openEdit(t)} className="text-xs text-emerald-600 hover:underline">Edit</button>
-                    <button onClick={() => setDeleting(t)} className="text-xs text-rose-600 hover:underline">Hapus</button>
+                  <div className="mt-1 flex gap-2">
+                    <button onClick={() => openEdit(t)} className="flex items-center gap-1 rounded-lg p-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-accent" aria-label="Edit">
+                      <Pencil size={14} /> Edit
+                    </button>
+                    <button onClick={() => setDeleting(t)} className="flex items-center gap-1 rounded-lg p-1 text-xs text-slate-500 hover:bg-down-soft hover:text-down" aria-label="Hapus">
+                      <Trash2 size={14} /> Hapus
+                    </button>
                   </div>
                 </li>
               ))}
@@ -180,7 +227,7 @@ export default function Transactions() {
                 <tbody>
                   {transactions.map((t) => (
                     <tr key={t.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2.5 pr-3 text-slate-500">{t.date}</td>
+                      <td className="py-2.5 pr-3 text-slate-500">{fmtDT(t)}</td>
                       <td className="py-2.5 pr-3">
                         <Badge color={KIND_META[t.kind]?.color || '#94a3b8'}>{KIND_META[t.kind]?.label || t.kind}</Badge>
                       </td>
@@ -195,13 +242,16 @@ export default function Transactions() {
                       </td>
                       <td className="py-2.5 pr-3">{accountCell(t)}</td>
                       <td className="max-w-40 truncate py-2.5 pr-3 text-slate-600">{t.note || '—'}</td>
-                      <td className={`py-2.5 text-right font-semibold ${t.kind === 'income' ? 'text-emerald-600' : t.kind === 'expense' ? 'text-rose-600' : 'text-indigo-600'}`}>
+                      <td className={`py-2.5 text-right font-semibold ${AMOUNT_CLASS[t.kind]}`}>
                         {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
                       </td>
                       <td className="whitespace-nowrap py-2.5 pl-3 text-right">
-                        <button onClick={() => openEdit(t)} className="text-emerald-600 hover:underline">Edit</button>
-                        <span className="mx-2 text-slate-300">|</span>
-                        <button onClick={() => setDeleting(t)} className="text-rose-600 hover:underline">Hapus</button>
+                        <button onClick={() => openEdit(t)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-accent" aria-label="Edit">
+                          <Pencil size={16} />
+                        </button>
+                        <button onClick={() => setDeleting(t)} className="ml-1 rounded-lg p-1.5 text-slate-400 hover:bg-down-soft hover:text-down" aria-label="Hapus">
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -211,6 +261,19 @@ export default function Transactions() {
           </>
         )}
       </Card>
+
+      {totalTxs > pageSize && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-400">
+            Menampilkan {Math.min(totalTxs, (page - 1) * pageSize + 1)}–{Math.min(page * pageSize, totalTxs)} dari {totalTxs}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => Math.max(p - 1, 1))}>‹ Sebelumnya</Button>
+            <span className="text-sm font-medium text-slate-500">Halaman {page}</span>
+            <Button variant="outline" disabled={page * pageSize >= totalTxs} onClick={() => setPage((p) => p + 1)}>Berikutnya ›</Button>
+          </div>
+        </div>
+      )}
 
       <TransactionModal
         open={modalOpen}
@@ -226,7 +289,7 @@ export default function Transactions() {
         <p className="text-sm text-slate-600">Yakin mau menghapus transaksi ini?</p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setDeleting(null)}>Batal</Button>
-          <Button variant="danger" onClick={confirmDelete}>Hapus</Button>
+          <Button variant="danger" loading={deletingBusy} onClick={confirmDelete}>Hapus</Button>
         </div>
       </Modal>
     </div>

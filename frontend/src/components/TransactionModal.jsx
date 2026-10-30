@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import api, { errMsg } from '../lib/api.js'
+import { Clock } from 'lucide-react'
+import api, { errMsg, fmtMoney, parseMoney } from '../lib/api.js'
 import { Button, Input, Modal, Select } from './ui.jsx'
+import { toast } from './toast.jsx'
 
 const emptyForm = {
   kind: 'expense',
   amount: '',
   date: new Date().toISOString().slice(0, 10),
+  time: '',
   category_id: '',
   account_id: '',
   to_account_id: '',
@@ -17,6 +20,7 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
   const [accounts, setAccounts] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [err, setErr] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const loadAccounts = () => api.get('/accounts').then((r) => setAccounts(r.data)).catch(() => {})
   const loadCategories = () => api.get('/categories').then((r) => setCategories(r.data)).catch(() => {})
@@ -32,8 +36,9 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
     if (editing) {
       setForm({
         kind: editing.kind,
-        amount: editing.amount,
+        amount: fmtMoney(editing.amount),
         date: editing.date,
+        time: editing.time || '',
         category_id: editing.category_id ?? '',
         account_id: editing.account_id,
         to_account_id: editing.to_account_id ?? '',
@@ -56,12 +61,24 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
     }
   }
 
+  const setNow = () => {
+    const n = new Date()
+    setForm({
+      ...form,
+      date: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`,
+      time: `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`
+    })
+  }
+
   const submit = async (e) => {
     e.preventDefault()
+    if (saving) return
+    setSaving(true)
     const payload = {
       kind: form.kind,
-      amount: Number(form.amount),
+      amount: parseMoney(form.amount),
       date: form.date,
+      time: form.time || null,
       account_id: Number(form.account_id),
       to_account_id: form.kind === 'transfer' && form.to_account_id ? Number(form.to_account_id) : null,
       category_id: form.category_id ? Number(form.category_id) : null,
@@ -70,40 +87,59 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
     try {
       if (editing) await api.patch(`/transactions/${editing.id}`, payload)
       else await api.post('/transactions', payload)
+      toast.success(editing ? 'Transaksi berhasil diperbarui' : 'Transaksi berhasil ditambahkan')
+      window.dispatchEvent(new Event('tx-changed'))
       onSaved && onSaved()
+      onClose && onClose()
     } catch (e2) {
       setErr(errMsg(e2))
+      toast.error(errMsg(e2))
+    } finally {
+      setSaving(false)
     }
   }
 
+  const inputCls = 'rounded-[10px] border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/15'
+
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit Transaksi' : 'Tambah Transaksi'}>
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} className="space-y-5">
         <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setKind('expense')}
-            className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'expense' ? 'bg-rose-600 text-white' : 'border border-slate-300 text-slate-600'}`}
+            className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-[13px] font-semibold transition-colors ${form.kind === 'expense' ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             Pengeluaran
           </button>
           <button
             type="button"
             onClick={() => setKind('income')}
-            className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'income' ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-slate-600'}`}
+            className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-[13px] font-semibold transition-colors ${form.kind === 'income' ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             Pemasukan
           </button>
           <button
             type="button"
             onClick={() => setKind('transfer')}
-            className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'transfer' ? 'bg-indigo-600 text-white' : 'border border-slate-300 text-slate-600'}`}
+            className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-[13px] font-semibold transition-colors ${form.kind === 'transfer' ? 'border border-indigo-200 bg-indigo-50 text-indigo-700' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             Pindah Dana
           </button>
         </div>
-        <Input label="Nominal (Rp)" type="number" min="0" step="500" required placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-        <Input label="Tanggal" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+        <Input label="Nominal (Rp)" type="text" inputMode="numeric" pattern="[0-9.]*" required placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: fmtMoney(e.target.value) })} />
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-medium text-slate-500">Tanggal & jam</label>
+            <button type="button" onClick={setNow} className="flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-accent hover:bg-slate-50">
+              <Clock size={14} /> Sekarang
+            </button>
+          </div>
+          <div className="grid grid-cols-[1fr_7rem] gap-2">
+            <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls} />
+            <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className={inputCls} />
+          </div>
+        </div>
         {form.kind === 'transfer' ? (
           <>
             <Select label="Dari Akun" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
@@ -129,9 +165,9 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
         )}
         <Input label="Catatan (opsional)" placeholder={form.kind === 'transfer' ? 'cth: Transfer ke OVO' : 'cth: Makan siang'} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
         {err && <p className="text-sm text-rose-600">{err}</p>}
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="grid grid-cols-2 gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
-          <Button type="submit">{editing ? 'Simpan Perubahan' : 'Simpan'}</Button>
+          <Button type="submit" loading={saving}>{editing ? 'Simpan Perubahan' : 'Simpan'}</Button>
         </div>
       </form>
     </Modal>

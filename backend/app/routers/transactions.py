@@ -24,14 +24,15 @@ def _check_account(db: Session, user: User, account_id: int) -> None:
         raise HTTPException(status_code=400, detail="Akun tidak valid")
 
 
-@router.get("", response_model=list[TransactionOut])
+@router.get("")
 def list_transactions(
     start: date | None = None,
     end: date | None = None,
     category_id: int | None = None,
     account_id: int | None = None,
     kind: str | None = None,
-    limit: int = 100,
+    limit: int = 10,
+    offset: int = 0,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -46,7 +47,9 @@ def list_transactions(
         q = q.filter(Transaction.account_id == account_id)
     if kind:
         q = q.filter(Transaction.kind == kind)
-    return q.order_by(Transaction.date.desc(), Transaction.id.desc()).limit(limit).all()
+    total = q.count()
+    items = q.order_by(Transaction.date.desc(), Transaction.id.desc()).offset(offset).limit(limit).all()
+    return {"items": [TransactionOut.model_validate(i) for i in items], "total": total}
 
 
 @router.post("", response_model=TransactionOut, status_code=201)

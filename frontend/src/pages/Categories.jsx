@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg } from '../lib/api.js'
 import { Button, Card, ColorPicker, Input, Modal } from '../components/ui.jsx'
+import { toast } from '../components/toast.jsx'
 
 const COLORS = ['#f97316', '#3b82f6', '#ec4899', '#a855f7', '#ef4444', '#14b8a6', '#f59e0b', '#22c55e', '#84cc16', '#64748b']
 const KIND_LABEL = { income: 'Pemasukan', expense: 'Pengeluaran' }
@@ -13,7 +14,9 @@ export default function Categories() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [err, setErr] = useState('')
+  const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(null)
+  const [deletingBusy, setDeletingBusy] = useState(false)
 
   const load = useCallback(() => {
     api.get('/categories').then((r) => setCats(r.data)).catch(() => {})
@@ -37,23 +40,34 @@ export default function Categories() {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (saving) return
+    setSaving(true)
     try {
       if (editing) await api.patch(`/categories/${editing.id}`, form)
       else await api.post('/categories', form)
+      toast.success(editing ? 'Kategori berhasil diperbarui' : 'Kategori berhasil ditambahkan')
       setModalOpen(false)
       load()
     } catch (e) {
       setErr(errMsg(e))
+      toast.error(errMsg(e))
+    } finally {
+      setSaving(false)
     }
   }
 
   const confirmDelete = async () => {
+    if (!deleting || deletingBusy) return
+    setDeletingBusy(true)
     try {
       await api.delete(`/categories/${deleting.id}`)
       setDeleting(null)
       load()
+      toast.success('Kategori berhasil dihapus')
     } catch (e) {
-      alert(errMsg(e))
+      toast.error(errMsg(e))
+    } finally {
+      setDeletingBusy(false)
     }
   }
 
@@ -102,7 +116,7 @@ export default function Categories() {
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
-            <Button type="submit">Simpan</Button>
+            <Button type="submit" loading={saving}>Simpan</Button>
           </div>
         </form>
       </Modal>
@@ -113,7 +127,7 @@ export default function Categories() {
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setDeleting(null)}>Batal</Button>
-          <Button variant="danger" onClick={confirmDelete}>Hapus</Button>
+          <Button variant="danger" loading={deletingBusy} onClick={confirmDelete}>Hapus</Button>
         </div>
       </Modal>
     </div>

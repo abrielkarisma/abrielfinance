@@ -7,24 +7,23 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Account, Category, User
 from ..schemas import (
-    ChangePassword,
-    LoginRequest,
+    ProfileLoginRequest,
+    ProfileOut,
     RefreshRequest,
+    SetupRequest,
     Token,
-    UserCreate,
-    UserOut,
 )
 from ..security import (
     create_access_token,
     create_refresh_token,
     decode_token,
-    get_current_user,
     hash_password,
     verify_password,
 )
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+profiles_router = APIRouter(prefix="/api", tags=["profiles"])
 
 DEFAULT_CATEGORIES = [
     ("Makanan", "expense", "#f97316"),
@@ -40,12 +39,26 @@ DEFAULT_CATEGORIES = [
 ]
 
 
+def _default_category_specs(db: Session) -> list[tuple]:
+    demo = db.query(User).filter(User.name == "demo").first()
+    if demo is not None:
+        cats = (
+            db.query(Category)
+            .filter(Category.user_id == demo.id)
+            .order_by(Category.id)
+            .all()
+        )
+        if cats:
+            return [(c.name, c.kind, c.color, c.icon) for c in cats]
+    return [(name, kind, color, None) for name, kind, color in DEFAULT_CATEGORIES]
+
+
 def _seed_default_categories(db: Session, user: User) -> None:
     existing = db.query(Category).filter(Category.user_id == user.id).count()
     if existing:
         return
-    for name, kind, color in DEFAULT_CATEGORIES:
-        db.add(Category(user_id=user.id, name=name, kind=kind, color=color))
+    for name, kind, color, icon in _default_category_specs(db):
+        db.add(Category(user_id=user.id, name=name, kind=kind, color=color, icon=icon))
     db.commit()
 
 
@@ -64,62 +77,59 @@ def _seed_default_account(db: Session, user: User) -> None:
     db.commit()
 
 
-@router.post("/register", response_model=Token, status_code=201)
-def register(payload: UserCreate, db: Session = Depends(get_db)):
-    exists = db.query(User).filter(User.email == payload.email).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Email sudah terdaftar")
-    user = User(
-        email=payload.email,
+@profiles_router.get("/profiles", response_model=list[ProfileOut])
+def list_profiles(db: Session = Depends(get_db)):
+    return db.query(User).order_by(User.id).all()
+
+
+@router.post("/setup", response_model=Token, status_code=201)
+@limiter.limit("5/minute")
+def setup(request: FastAPIRequest, payload: SetupRequest, db: Session = Depends(get_db)):
+    if db.query(User).count() > 0:
+        raise HTTPException(status_code=400, detail="Setup sudah dilakukan")
+    admin = User(
         name=payload.name,
-        password_hash=hash_password(payload.password),
+        pin_hash=hash_password(payload.pin),
+        avatar_color="#f97316",
+        is_admin=True,
     )
-    db.add(user)
+    db.add(admin)
     db.commit()
-    db.refresh(user)
-    _seed_default_categories(db, user)
-    _seed_default_account(db, user)
+    db.refresh(admin)
+    _seed_default_categories(db, admin)
+    _seed_default_account(db, admin)
     return Token(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-        user=UserOut.model_validate(user),
+        access_token=create_access_token(admin.id),
+        refresh_token=create_refresh_token(admin.id),
+        user=ProfileOut.model_validate(admin),
     )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/profile-login", response_model=Token)
 @limiter.limit("10/minute")
-def login(request: FastAPIRequest, payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Email atau password salah")
+def profile_login(
+    request: FastAPIRequest,
+    payload: ProfileLoginRequest,
+    db: Session = Depends(get_db),
+):
+    profile = db.get(User, payload.profile_id)
+    if not profile or not verify_password(payload.pin, profile.pin_hash):
+        raise HTTPException(status_code=401, detail="Profil atau PIN salah")
     return Token(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-        user=UserOut.model_validate(user),
+        access_token=create_access_token(profile.id),
+        refresh_token=create_refresh_token(profile.id),
+        user=ProfileOut.model_validate(profile),
     )
 
 
 @router.post("/refresh", response_model=Token)
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
-    user_id = decode_token(payload.refresh_token, expected_type="refresh")
-    user = db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=401, detail="User tidak ditemukan")
+    profile_id = decode_token(payload.refresh_token, expected_type="refresh")
+    profile = db.get(User, profile_id)
+    if not profile:
+        raise HTTPException(status_code=401, detail="Profil tidak ditemukan")
     return Token(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-        user=UserOut.model_validate(user),
+        access_token=create_access_token(profile.id),
+        refresh_token=create_refresh_token(profile.id),
+        user=ProfileOut.model_validate(profile),
     )
-
-
-@router.post("/change-password", status_code=204)
-def change_password(
-    payload: ChangePassword,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    if not verify_password(payload.old_password, user.password_hash):
-        raise HTTPException(status_code=400, detail="Password lama salah")
-    user.password_hash = hash_password(payload.new_password)
-    db.commit()
-    return None

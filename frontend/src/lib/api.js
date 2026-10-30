@@ -45,3 +45,12 @@ export function fmtIDR(n) {
 export function errMsg(e) {
   return e?.response?.data?.detail || 'Terjadi kesalahan'
 }
+
+
+export function fmtMoney(v) {
+  const s = String(v == null ? '' : v).replace(/[^\d]/g, '')
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+export function parseMoney(s) {
+  return Number(String(s || '').replace(/[^\d]/g, '')) || 0
+}

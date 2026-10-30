@@ -1,79 +1,95 @@
-# Keuangan Pribadi
+# Fundy
 
-Aplikasi web pencatat keuangan pribadi (pengeluaran/pemasukan) — multi-user, dengan UI Bahasa Indonesia.
+Aplikasi keuangan pribadi berbasis web: kelola akun, kategori, transaksi, pengingat, dan grafik pemasukan/pengeluaran. Backend **FastAPI + SQLite**, frontend **React + Vite + Tailwind**.
 
-- **Backend:** Python FastAPI + SQLite (SQLAlchemy) + JWT (access/refresh) + bcrypt + rate-limit
-- **Frontend:** Vite + React + Tailwind CSS + Recharts
-- **Produksi:** FastAPI melayani `/api/*` sekaligus static `frontend/dist/` (1 service aja)
+## Fitur
 
-## Struktur
+- Multi-profil dengan PIN 4 digit (profil admin & profil personal)
+- Pencatatan transaksi: pemasukan, pengeluaran, dan pindah dana antar-akun
+- Akun (bank / e-wallet / tunai) dengan saldo awal dan mutasi otomatis
+- Kategori yang dapat disesuaikan; grafik harian & 6 bulan dengan sumbu Y dinamis dan format jutaan
+- Pengingat recurring (jadwal hari kerja, notifikasi in-app/browser)
+- Mode terang/gelap dan sembunyikan/tampilkan saldo secara global
+- Admin: kelola profil, reset PIN, hapus profil
+- Profil baru otomatis mendapat kategori default dari profil `demo`
+
+## Arsitektur
 
 ```
-keuangan-app/
-├── backend/          # FastAPI app
-│   ├── app/
-│   │   ├── main.py       # entry + serve SPA
-│   │   ├── config.py      # env (pydantic-settings)
-│   │   ├── db.py          # SQLAlchemy engine/session
-│   │   ├── models.py       # ORM
-│   │   ├── schemas.py      # Pydantic
-│   │   ├── security.py     # bcrypt + JWT
-│   │   └── routers/        # auth, categories, transactions, reports
-│   ├── requirements.txt
-│   └── .env.example
-└── frontend/         # Vite + React
-    └── src/
-        ├── pages/         # Login, Register, Dashboard, Transaksi, Kategori
-        ├── components/    # Layout, UI kit
-        └── lib/api.js      # axios wrapper + auto-refresh token
+backend/     FastAPI + SQLAlchemy + SQLite
+frontend/    React + Vite + Tailwind (Recharts)
 ```
 
-## API (ringkas)
+## Menjalankan Secara Lokal
 
-| Method | Endpoint | Deskripsi |
-|---|---|---|
-| POST | `/api/auth/register` | Daftar (auto-login) |
-| POST | `/api/auth/login` | Login (rate-limit) |
-| POST | `/api/auth/refresh` | Refresh JWT |
-| POST | `/api/auth/change-password` | Ganti password |
-| GET/POST | `/api/categories` | List / buat kategori |
-| PATCH/DELETE | `/api/categories/{id}` | Edit / hapus kategori |
-| GET/POST | `/api/transactions` | List / buat transaksi |
-| PATCH/DELETE | `/api/transactions/{id}` | Edit / hapus transaksi |
-| GET | `/api/reports/summary` | Ringkasan bulanan + breakdown per kategori |
+### Prasyarat
 
-Semua `/api/*` (kecuali login/register) wajib `Authorization: Bearer <token>`.
+- Python 3.11+
+- Node.js 18+
 
-## Jalanin Lokal
+### Backend
 
-**Backend:**
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env             # isi SECRET_KEY
-uvicorn app.main:app --reload    # http://127.0.0.1:8000
+cp .env.example .env
+uvicorn app.main:app --reload
 ```
 
-**Frontend (dev, hot-reload):**
+Server berjalan di `http://localhost:8000`. Dokumentasi API otomatis di `http://localhost:8000/docs`.
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
-npm run dev                      # http://localhost:5173 (proxy /api → :8000)
+npm run dev
 ```
 
-**Produksi (1 service):** build frontend, backend langsung serve staticnya.
+Buka `http://localhost:5173`.
+
+### Database
+
+Repo ini menyertakan **database uji** `backend/seed/fundy_demo.db` berisi data contoh (fiktif):
+
+- Profil **demo** dengan PIN **6666**
+- 10 kategori default, 3 akun, dan 12 transaksi contoh
+
+Untuk memakai database uji:
+
 ```bash
-cd frontend && npm run build
-cd ../backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
-# buka http://127.0.0.1:8000
+cp backend/seed/fundy_demo.db backend/keuangan.db
 ```
 
-### Env (`.env`)
-```
-SECRET_KEY=<random-64-hex>        # buat: python -c "import secrets;print(secrets.token_hex(32))"
-DB_PATH=keuangan.db
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=30
-```
+atau arahkan `DB_PATH` di `backend/.env` ke file tersebut.
+
+| Profil | PIN | Peran |
+|--------|-----|-------|
+| demo | 6666 | Personal |
+
+> Catatan: database produksi (berisi data asli) tidak disertakan dalam repo.
+
+## Ringkasan API
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| GET | `/api/profiles` | Daftar profil untuk layar pemilihan |
+| POST | `/api/auth/setup` | Setup awal: buat profil admin pertama |
+| POST | `/api/auth/profile-login` | Login dengan profil + PIN |
+| POST | `/api/auth/refresh` | Refresh JWT |
+| GET/POST | `/api/categories` | List / buat kategori |
+| PATCH/DELETE | `/api/categories/{id}` | Edit / hapus kategori |
+| GET/POST | `/api/accounts` | List / buat akun |
+| PATCH/DELETE | `/api/accounts/{id}` | Edit / hapus akun |
+| GET/POST | `/api/transactions` | List / buat transaksi |
+| PATCH/DELETE | `/api/transactions/{id}` | Edit / hapus transaksi |
+| GET | `/api/reports/summary` | Ringkasan bulanan + breakdown per kategori |
+| GET/POST | `/api/reminders` | List / buat pengingat |
+| PATCH/DELETE | `/api/reminders/{id}` | Edit / hapus pengingat |
+| POST | `/api/admin/profiles` | Admin: buat profil baru |
+
+## Deployment
+
+Aplikasi di-deploy pada VPS di belakang Cloudflare Tunnel dan diakses melalui `https://abrielfinance.my.id/`.

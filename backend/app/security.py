@@ -67,3 +67,11 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="User tidak ditemukan")
     return user
+
+
+def get_current_admin(
+    profile: User = Depends(get_current_user),
+) -> User:
+    if not profile.is_admin:
+        raise HTTPException(status_code=403, detail="Khusus admin")
+    return profile

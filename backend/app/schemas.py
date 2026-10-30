@@ -1,43 +1,68 @@
 from datetime import date, datetime
+from datetime import date as _Date
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
-class UserCreate(BaseModel):
-    email: EmailStr
-    name: str = Field(min_length=1, max_length=100)
-    password: str = Field(min_length=8, max_length=128)
+def _check_pin(v: str) -> str:
+    if not isinstance(v, str) or len(v) != 4 or not v.isdigit():
+        raise ValueError("PIN harus 4 angka")
+    return v
 
 
-class UserOut(BaseModel):
+class ProfileOut(BaseModel):
     id: int
-    email: EmailStr
     name: str
+    avatar_color: str = "#64748b"
+    is_admin: bool = False
 
     class Config:
         from_attributes = True
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
 
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    user: UserOut
+    user: ProfileOut
+
+
+class ProfileLoginRequest(BaseModel):
+    profile_id: int
+    pin: str
+
+    _pin = field_validator("pin")(_check_pin)
+
+
+class SetupRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    pin: str
+
+    _pin = field_validator("pin")(_check_pin)
+
+
+class AdminProfileCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    pin: str
+    avatar_color: str = "#64748b"
+
+    _pin = field_validator("pin")(_check_pin)
+
+
+class AdminProfileUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    avatar_color: Optional[str] = None
+
+
+class ResetPinRequest(BaseModel):
+    new_pin: str
+
+    _pin = field_validator("new_pin")(_check_pin)
 
 
 class RefreshRequest(BaseModel):
     refresh_token: str
-
-
-class ChangePassword(BaseModel):
-    old_password: str
-    new_password: str = Field(min_length=8, max_length=128)
 
 
 class AccountCreate(BaseModel):
@@ -94,6 +119,7 @@ class TransactionCreate(BaseModel):
     kind: str = Field(pattern="^(expense|income|transfer)$")
     amount: float = Field(gt=0)
     date: date
+    time: Optional[str] = Field(default=None, pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$")
     account_id: int
     to_account_id: Optional[int] = None
     category_id: Optional[int] = None
@@ -112,7 +138,8 @@ class TransactionCreate(BaseModel):
 class TransactionUpdate(BaseModel):
     kind: Optional[str] = Field(default=None, pattern="^(expense|income|transfer)$")
     amount: Optional[float] = Field(default=None, gt=0)
-    date: Optional[date] = None
+    date: Optional[_Date] = None
+    time: Optional[str] = Field(default=None, pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$")
     account_id: Optional[int] = None
     to_account_id: Optional[int] = None
     category_id: Optional[int] = None
@@ -124,6 +151,7 @@ class TransactionOut(BaseModel):
     kind: str
     amount: float
     date: date
+    time: Optional[str] = None
     account_id: int
     to_account_id: Optional[int] = None
     category_id: Optional[int] = None

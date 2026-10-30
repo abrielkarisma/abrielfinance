@@ -1,18 +1,38 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import {
+  BarChart3, Bell, Boxes, Eye, EyeOff, Landmark, LayoutDashboard, List, LogOut, Moon, Plus, Settings, Sun, Tags
+} from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useHideBal } from '../context/BalContext.jsx'
 import TransactionModal from './TransactionModal.jsx'
+import { cn } from './ui.jsx'
+import FundyLogo from './FundyLogo.jsx'
+
+const I = {
+  dashboard: <LayoutDashboard size={18} strokeWidth={1.8} />,
+  list: <List size={18} strokeWidth={1.8} />,
+  chart: <BarChart3 size={18} strokeWidth={1.8} />,
+  bank: <Landmark size={18} strokeWidth={1.8} />,
+  box: <Boxes size={18} strokeWidth={1.8} />,
+  tag: <Tags size={18} strokeWidth={1.8} />,
+  bell: <Bell size={18} strokeWidth={1.8} />,
+  gear: <Settings size={18} strokeWidth={1.8} />,
+  sun: <Sun size={18} strokeWidth={1.8} />,
+  moon: <Moon size={18} strokeWidth={1.8} />,
+  logout: <LogOut size={18} strokeWidth={1.8} />,
+  plus: <Plus size={24} strokeWidth={2} />
+}
 
 const primaryLinks = [
-  { to: '/', label: 'Dashboard', icon: '📊' },
-  { to: '/transactions', label: 'Transaksi', icon: '🧾' },
-  { to: '/grafik', label: 'Grafik', icon: '📈' }
+  { to: '/', label: 'Dashboard', icon: I.dashboard },
+  { to: '/transactions', label: 'Transaksi', icon: I.list },
+  { to: '/grafik', label: 'Grafik', icon: I.chart }
 ]
-
 const masterLinks = [
-  { to: '/accounts', label: 'Rekening', icon: '🏦' },
-  { to: '/categories', label: 'Kategori', icon: '🏷️' }
+  { to: '/accounts', label: 'Rekening', icon: I.bank },
+  { to: '/categories', label: 'Kategori', icon: I.tag }
 ]
 
 function NavItem({ link }) {
@@ -21,27 +41,30 @@ function NavItem({ link }) {
       to={link.to}
       end={link.to === '/'}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-          isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
-        }`
+        cn(
+          'flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors duration-150',
+          isActive ? 'bg-accent-soft text-accent-ink' : 'text-slate-500 hover:bg-slate-100 hover:text-ink'
+        )
       }
     >
-      <span className="text-base">{link.icon}</span>
+      {link.icon}
       {link.label}
     </NavLink>
   )
 }
 
 export default function Layout() {
-  const { logout } = useAuth()
+  const { logout, profile } = useAuth()
+  const { hide, toggle } = useHideBal()
   const navigate = useNavigate()
   const [addOpen, setAddOpen] = useState(false)
-  const [dark, setDark] = useState(() => localStorage.getItem('myfinance-theme') === 'dark')
+  const [dark, setDark] = useState(() => localStorage.getItem('fundy-theme') === 'dark')
   const [dueCount, setDueCount] = useState(0)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('myfinance-theme', dark ? 'dark' : 'light')
+    localStorage.setItem('fundy-theme', dark ? 'dark' : 'light')
+    window.dispatchEvent(new Event('fundy-theme'))
   }, [dark])
 
   useEffect(() => {
@@ -74,102 +97,145 @@ export default function Layout() {
     return () => { alive = false; clearInterval(iv) }
   }, [])
 
-  const bell = (
-    <span className="relative inline-flex">
-      <span>🔔</span>
-      {dueCount > 0 && (
-        <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-          {dueCount}
-        </span>
-      )}
+  const bellBadge = dueCount > 0 && (
+    <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-down px-1 text-[10px] font-bold text-white">
+      {dueCount}
     </span>
   )
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* ===== Sidebar (desktop) ===== */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
-        <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-lg font-bold text-white">K</span>
-          <div className="leading-tight">
-            <div className="text-base font-bold text-slate-900">MyFinance</div>
-            <div className="text-xs text-slate-400">Personal Finance</div>
-          </div>
-        </div>
+  const brand = (
+    <>
+      <FundyLogo size={36} mode="auto" className="shrink-0" />
+      <div className="leading-tight">
+        <div className="text-base font-bold text-ink">Fundy</div>
+        <div className="text-xs text-slate-400">Keuangan pribadi</div>
+      </div>
+    </>
+  )
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Menu</div>
+  return (
+    <div className="min-h-screen bg-paper">
+      {}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200 bg-white lg:flex">
+        <div className="flex items-center gap-3 px-5 pb-2 pt-6">{brand}</div>
+
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
+          <div className="sw-label px-3 pb-1.5 pt-2">Menu</div>
           {primaryLinks.map((l) => <NavItem key={l.to} link={l} />)}
 
-          <div className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Data Master</div>
+          <div className="sw-label px-3 pb-1.5 pt-5">Data master</div>
           {masterLinks.map((l) => <NavItem key={l.to} link={l} />)}
 
           <NavLink
             to="/reminders"
             className={({ isActive }) =>
-              `mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
-              }`
+              cn(
+                'mt-2 flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors duration-150',
+                isActive ? 'bg-accent-soft text-accent-ink' : 'text-slate-500 hover:bg-slate-100 hover:text-ink'
+              )
             }
           >
-            {bell}
+            <span className="relative inline-flex">{I.bell}{bellBadge}</span>
             Pengingat
           </NavLink>
+
+          {profile?.is_admin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                cn(
+                  'mt-0.5 flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors duration-150',
+                  isActive ? 'bg-accent-soft text-accent-ink' : 'text-slate-500 hover:bg-slate-100 hover:text-ink'
+                )
+              }
+            >
+              {I.gear}
+              Kelola profil
+            </NavLink>
+          )}
         </nav>
 
-        <div className="border-t border-slate-200 px-4 py-4">
+        <div className="space-y-1 border-t border-slate-100 px-3 py-3">
+          {profile && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left hover:bg-slate-100"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: profile.avatar_color }}>
+                {(profile.name || '?').charAt(0).toUpperCase()}
+              </span>
+              <span className="truncate text-sm font-medium text-ink">{profile.name}</span>
+            </button>
+          )}
+          <button
+            onClick={toggle}
+            aria-label="Sembunyikan/tampilkan saldo"
+            title="Sembunyikan/tampilkan saldo"
+            className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-ink"
+          >
+            {hide ? <EyeOff size={18} strokeWidth={1.8} /> : <Eye size={18} strokeWidth={1.8} />}
+            <span>{hide ? 'Tampilkan saldo' : 'Sembunyikan saldo'}</span>
+          </button>
           <button
             onClick={() => setDark((d) => !d)}
-            className="mb-3 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-ink"
           >
-            <span>{dark ? 'Mode Terang' : 'Mode Gelap'}</span>
-            <span>{dark ? '☀️' : '🌙'}</span>
+            {dark ? I.sun : I.moon}
+            <span>{dark ? 'Mode terang' : 'Mode gelap'}</span>
           </button>
           <button
             onClick={() => { logout(); navigate('/login') }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+            className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-sm text-slate-500 hover:bg-down-soft hover:text-down"
           >
-            <span>🚪</span> Keluar
+            {I.logout}
+            Keluar
           </button>
         </div>
       </aside>
 
-      {/* ===== Header (mobile) ===== */}
+      {}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center justify-between">
-          <div className="leading-tight">
-            <div className="text-base font-bold text-slate-900">MyFinance</div>
-            <div className="text-xs text-slate-400">Personal Finance</div>
+          <div className="flex items-center gap-2">
+            <FundyLogo size={32} mode="auto" className="shrink-0" />
+            <span className="text-base font-bold text-ink">Fundy</span>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setDark((d) => !d)}
-              className="text-lg"
-              aria-label="Toggle tema"
-            >
-              {dark ? '☀️' : '🌙'}
+          <div className="flex items-center gap-1.5">
+            <button onClick={toggle} className="rounded-[8px] p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Sembunyikan/tampilkan saldo">
+              {hide ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
-            <NavLink to="/reminders" aria-label="Pengingat">
-              {bell}
+            {profile?.is_admin && (
+              <button
+                onClick={() => navigate('/admin')}
+                aria-label="Kelola profil"
+                title="Kelola profil"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm transition-transform active:scale-95"
+                style={{ backgroundColor: profile.avatar_color }}
+              >
+                {(profile.name || '?').charAt(0).toUpperCase()}
+              </button>
+            )}
+            <button onClick={() => setDark((d) => !d)} className="rounded-[8px] p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Toggle tema">
+              {dark ? I.sun : I.moon}
+            </button>
+            <NavLink to="/reminders" className="relative rounded-[8px] p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Pengingat">
+              {I.bell}{bellBadge}
             </NavLink>
-            <button
-              onClick={() => { logout(); navigate('/login') }}
-              className="text-sm text-slate-500"
-            >
-              Keluar
+            <button onClick={() => { logout(); navigate('/login') }} className="rounded-[8px] p-1.5 text-slate-500 hover:bg-down-soft hover:text-down" aria-label="Keluar">
+              {I.logout}
             </button>
           </div>
         </div>
       </header>
 
-      {/* ===== Main ===== */}
-      <main className="px-4 pb-28 pt-6 lg:pl-72 lg:pr-8 lg:pb-12 lg:pt-8">
+      {}
+      <main className="px-4 pb-40 pt-6 lg:pl-64 lg:pr-8 lg:pb-28 lg:pt-8">
         <div className="mx-auto max-w-5xl">
           <Outlet />
         </div>
       </main>
 
-      {/* ===== Bottom nav (mobile) ===== */}
+      {}
       <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
         {primaryLinks.map((l) => (
           <NavLink
@@ -177,38 +243,37 @@ export default function Layout() {
             to={l.to}
             end={l.to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
-                isActive ? 'text-emerald-700' : 'text-slate-500'
-              }`
+              cn(
+                'flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium',
+                isActive ? 'text-accent' : 'text-slate-400'
+              )
             }
           >
-            <span className="text-lg">{l.icon}</span>
+            {l.icon}
             {l.label}
           </NavLink>
         ))}
         <NavLink
-          to="/accounts"
+          to="/data-master"
           className={({ isActive }) =>
-            `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
-              isActive ? 'text-emerald-700' : 'text-slate-500'
-            }`
+            cn(
+              'flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium',
+              isActive ? 'text-accent' : 'text-slate-400'
+            )
           }
         >
-          <span className="text-lg">🏦</span>
-          Data Master
+          {I.box}
+          Data master
         </NavLink>
       </nav>
 
-      {/* ===== FAB (mobile) ===== */}
+      {}
       <button
         onClick={() => setAddOpen(true)}
-        className="fixed bottom-16 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-1"
         aria-label="Tambah transaksi"
+        className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1b1d1f] text-white shadow-[0_8px_24px_rgba(16,24,40,0.35)] transition-transform hover:bg-[#33373a] active:scale-95 lg:bottom-8 lg:right-8"
       >
-        <span className="-top-7 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white shadow-lg transition-transform hover:scale-105">
-          +
-        </span>
-        <span className="text-xs font-medium text-slate-500">Tambah</span>
+        {I.plus}
       </button>
 
       <TransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
