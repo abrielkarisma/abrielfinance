@@ -88,17 +88,17 @@ export default function Transactions() {
         <Button onClick={openAdd}>+ Tambah Transaksi</Button>
       </div>
 
-      <Card className="flex flex-wrap items-end gap-4">
-        <div>
+      <Card className="grid grid-cols-2 gap-4 lg:flex lg:flex-wrap lg:items-end">
+        <div className="col-span-2 lg:col-auto">
           <span className="mb-1 block text-sm font-medium text-slate-600">Bulan</span>
-          <input type="month" value={filters.month} onChange={(e) => setFilters({ ...filters, month: e.target.value })} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500" />
+          <input type="month" value={filters.month} onChange={(e) => setFilters({ ...filters, month: e.target.value })} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500" />
         </div>
-        <Select label="Jenis" value={filters.kind} onChange={(e) => setFilters({ ...filters, kind: e.target.value })} className="w-40">
+        <Select label="Jenis" value={filters.kind} onChange={(e) => setFilters({ ...filters, kind: e.target.value })} className="sm:w-40">
           <option value="">Semua</option>
           <option value="income">Pemasukan</option>
           <option value="expense">Pengeluaran</option>
         </Select>
-        <Select label="Kategori" value={filters.category_id} onChange={(e) => setFilters({ ...filters, category_id: e.target.value })} className="w-48">
+        <Select label="Kategori" value={filters.category_id} onChange={(e) => setFilters({ ...filters, category_id: e.target.value })} className="sm:w-48">
           <option value="">Semua</option>
           {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
@@ -108,38 +108,66 @@ export default function Transactions() {
         {txs.length === 0 ? (
           <p className="py-12 text-center text-sm text-slate-400">Tidak ada transaksi.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-4 py-3">Tanggal</th>
-                  <th className="px-4 py-3">Kategori</th>
-                  <th className="px-4 py-3">Catatan</th>
-                  <th className="px-4 py-3 text-right">Nominal</th>
-                  <th className="px-4 py-3 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {txs.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-slate-500">{t.date}</td>
-                    <td className="px-4 py-3">
-                      {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <Badge color="#94a3b8">Tanpa</Badge>}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{t.note || <span className="text-slate-400">—</span>}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${t.kind === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button className="text-emerald-600 hover:underline" onClick={() => openEdit(t)}>Edit</button>
-                      <span className="mx-2 text-slate-300">|</span>
-                      <button className="text-rose-600 hover:underline" onClick={() => setDeleting(t)}>Hapus</button>
-                    </td>
+          <>
+            {/* Kartu (mobile) */}
+            <ul className="divide-y divide-slate-100 md:hidden">
+              {txs.map((t) => (
+                <li key={t.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-400">{t.date}</span>
+                        {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <Badge color="#94a3b8">Tanpa</Badge>}
+                      </div>
+                      <div className="mt-1 truncate text-sm text-slate-600">{t.note || '—'}</div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`text-sm font-bold ${t.kind === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
+                      </span>
+                      <div className="space-x-3">
+                        <button className="text-xs font-medium text-emerald-600 hover:underline" onClick={() => openEdit(t)}>Edit</button>
+                        <button className="text-xs font-medium text-rose-600 hover:underline" onClick={() => setDeleting(t)}>Hapus</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {/* Tabel (desktop) */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-4 py-3">Tanggal</th>
+                    <th className="px-4 py-3">Kategori</th>
+                    <th className="px-4 py-3">Catatan</th>
+                    <th className="px-4 py-3 text-right">Nominal</th>
+                    <th className="px-4 py-3 text-right">Aksi</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {txs.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-500">{t.date}</td>
+                      <td className="px-4 py-3">
+                        {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <Badge color="#94a3b8">Tanpa</Badge>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{t.note || <span className="text-slate-400">—</span>}</td>
+                      <td className={`px-4 py-3 text-right font-semibold ${t.kind === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button className="text-emerald-600 hover:underline" onClick={() => openEdit(t)}>Edit</button>
+                        <span className="mx-2 text-slate-300">|</span>
+                        <button className="text-rose-600 hover:underline" onClick={() => setDeleting(t)}>Hapus</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
 
