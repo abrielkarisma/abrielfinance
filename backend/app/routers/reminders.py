@@ -37,6 +37,8 @@ def create_reminder(
         days_of_week=",".join(str(d) for d in payload.days_of_week),
         time=payload.time,
         enabled=payload.enabled,
+        kind=payload.kind,
+        target_date=payload.target_date,
     )
     db.add(r)
     db.commit()
@@ -54,14 +56,20 @@ def due_reminders(
         d = date.fromisoformat(date_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="Tanggal tidak valid")
-    wd = d.weekday()  # Senin=0 .. Minggu=6
+    wd = d.weekday()
     rows = []
     for r in db.query(Reminder).filter(
         Reminder.user_id == user.id, Reminder.enabled.is_(True)
     ):
-        days = [int(x) for x in r.days_of_week.split(",") if x.strip() != ""]
-        if not days or wd in days:
-            rows.append(r)
+        if r.kind == "date":
+            if r.target_date == d:
+                rows.append(r)
+                r.enabled = False
+        else:
+            days = [int(x) for x in r.days_of_week.split(",") if x.strip() != ""]
+            if not days or wd in days:
+                rows.append(r)
+    db.commit()
     return rows
 
 

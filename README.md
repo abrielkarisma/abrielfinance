@@ -8,7 +8,7 @@ Aplikasi keuangan pribadi berbasis web: kelola akun, kategori, transaksi, pengin
 - Pencatatan transaksi: pemasukan, pengeluaran, dan pindah dana antar-akun
 - Akun (bank / e-wallet / tunai) dengan saldo awal dan mutasi otomatis
 - Kategori yang dapat disesuaikan; grafik harian & 6 bulan dengan sumbu Y dinamis dan format jutaan
-- Pengingat recurring (jadwal hari kerja, notifikasi in-app/browser)
+- Pengingat dua tipe: ulangi sesuai hari dalam seminggu, atau satu kali pada tanggal tertentu (notifikasi in-app/browser)
 - Mode terang/gelap dan sembunyikan/tampilkan saldo secara global
 - Admin: kelola profil, reset PIN, hapus profil
 - Profil baru otomatis mendapat kategori default dari profil `demo`

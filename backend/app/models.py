@@ -36,7 +36,7 @@ class Account(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
-    type: Mapped[str] = mapped_column(String(20), default="bank")  # bank | ewallet | cash
+    type: Mapped[str] = mapped_column(String(20), default="bank")
     color: Mapped[str] = mapped_column(String(20), default="#64748b")
     opening_balance: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -55,7 +55,7 @@ class Category(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
-    kind: Mapped[str] = mapped_column(String(10))  # expense | income
+    kind: Mapped[str] = mapped_column(String(10))
     color: Mapped[str] = mapped_column(String(20), default="#64748b")
     icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -76,10 +76,10 @@ class Transaction(Base):
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
-    kind: Mapped[str] = mapped_column(String(10))  # expense | income
+    kind: Mapped[str] = mapped_column(String(10))
     amount: Mapped[float] = mapped_column(Numeric(14, 2))
     date: Mapped[date] = mapped_column(Date, index=True)
-    time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # HH:MM
+    time: Mapped[str | None] = mapped_column(String(5), nullable=True)
     note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -96,8 +96,10 @@ class Reminder(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
     title: Mapped[str] = mapped_column(String(150))
     note: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    days_of_week: Mapped[str] = mapped_column(String(30), default="")  # "0,1,2" Mon=0..Sun=6; kosong = setiap hari
-    time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # HH:mm
+    days_of_week: Mapped[str] = mapped_column(String(30), default="")
+    time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    kind: Mapped[str] = mapped_column(String(10), default="weekly")
+    target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     enabled: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

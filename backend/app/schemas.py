@@ -194,9 +194,20 @@ class AccountsSummary(BaseModel):
 class ReminderCreate(BaseModel):
     title: str = Field(min_length=1, max_length=150)
     note: Optional[str] = Field(default=None, max_length=500)
-    days_of_week: list[int] = Field(default_factory=list)  # Mon=0..Sun=6; kosong = setiap hari
+    days_of_week: list[int] = Field(default_factory=list)
     time: Optional[str] = Field(default=None, pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$")
     enabled: bool = True
+    kind: str = Field(default="weekly", pattern="^(weekly|date)$")
+    target_date: Optional[date] = None
+
+    @model_validator(mode="after")
+    def _validate_kind(self):
+        if self.kind == "date":
+            if self.target_date is None:
+                raise ValueError("Untuk tipe tanggal, target_date wajib diisi")
+        else:
+            self.target_date = None
+        return self
 
 
 class ReminderUpdate(BaseModel):
@@ -205,6 +216,16 @@ class ReminderUpdate(BaseModel):
     days_of_week: Optional[list[int]] = None
     time: Optional[str] = Field(default=None, pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$")
     enabled: Optional[bool] = None
+    kind: Optional[str] = Field(default=None, pattern="^(weekly|date)$")
+    target_date: Optional[date] = None
+
+    @model_validator(mode="after")
+    def _validate_kind(self):
+        if self.kind == "date" and self.target_date is None:
+            raise ValueError("Untuk tipe tanggal, target_date wajib diisi")
+        if self.kind == "weekly":
+            self.target_date = None
+        return self
 
 
 class ReminderOut(BaseModel):
@@ -214,6 +235,8 @@ class ReminderOut(BaseModel):
     days_of_week: list[int]
     time: Optional[str] = None
     enabled: bool
+    kind: str
+    target_date: Optional[date] = None
     created_at: datetime
 
     @field_validator("days_of_week", mode="before")

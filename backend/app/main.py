@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from slowapi.errors import RateLimitExceeded
 
-from . import models  # noqa: F401 — daftarkan model ke metadata
+from . import models
 from .db import Base, engine
 from .routers import accounts, admin, auth, categories, reminders, reports, transactions
 

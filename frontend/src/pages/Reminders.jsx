@@ -6,7 +6,8 @@ import { toast } from '../components/toast.jsx'
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 const WORKDAYS = [0, 1, 2, 3, 4]
 
-const emptyForm = { title: '', note: '', days: [], time: '', enabled: true }
+const emptyForm = { title: '', note: '', days: [], time: '', enabled: true, kind: 'weekly', targetDate: '' }
+const fmtDate = (s) => (s ? new Date(s + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
 const emptyDays = (d) => (d.length === 0 ? 'Setiap hari'
   : d.length === 5 && WORKDAYS.every((x) => d.includes(x)) ? 'Hari kerja (Sen–Jum)'
   : d.sort((a, b) => a - b).map((i) => DAYS[i]).join(', '))
@@ -47,7 +48,7 @@ export default function Reminders() {
   }
   const openEdit = (r) => {
     setEditing(r)
-    setForm({ title: r.title, note: r.note || '', days: [...r.days_of_week], time: r.time || '', enabled: r.enabled })
+    setForm({ title: r.title, note: r.note || '', days: [...r.days_of_week], time: r.time || '', enabled: r.enabled, kind: r.kind || 'weekly', targetDate: r.target_date || '' })
     setErr('')
     setModalOpen(true)
   }
@@ -60,13 +61,19 @@ export default function Reminders() {
   const submit = async (e) => {
     e.preventDefault()
     if (saving) return
+    if (form.kind === 'date' && !form.targetDate) {
+      setErr('Untuk tipe tanggal, pilih tanggalnya dulu')
+      return
+    }
     setSaving(true)
     const payload = {
       title: form.title.trim(),
       note: form.note || null,
       days_of_week: form.days,
       time: form.time || null,
-      enabled: form.enabled
+      enabled: form.enabled,
+      kind: form.kind,
+      target_date: form.kind === 'date' ? form.targetDate : null
     }
     try {
       if (editing) await api.patch(`/reminders/${editing.id}`, payload)
@@ -178,7 +185,7 @@ export default function Reminders() {
                       {r.title}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                      {emptyDays(r.days_of_week)}
+                      {r.kind === 'date' ? `Sekali · ${fmtDate(r.target_date)}` : emptyDays(r.days_of_week)}
                     </span>
                     {r.time && (
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
@@ -228,36 +235,64 @@ export default function Reminders() {
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-slate-600">Ulangi pada hari</span>
-            <div className="mb-2 flex flex-wrap gap-2">
+            <span className="mb-1.5 block text-sm font-medium text-slate-600">Jenis jadwal</span>
+            <div className="mb-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, days: [] }))}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.length === 0 ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                onClick={() => setForm((f) => ({ ...f, kind: 'weekly' }))}
+                className={`rounded-xl border px-3 py-2 text-xs font-medium ${form.kind === 'weekly' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
               >
-                Setiap hari
+                Ulangi setiap minggu
               </button>
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, days: [...WORKDAYS] }))}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.length === 5 && WORKDAYS.every((d) => form.days.includes(d)) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                onClick={() => setForm((f) => ({ ...f, kind: 'date' }))}
+                className={`rounded-xl border px-3 py-2 text-xs font-medium ${form.kind === 'date' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
               >
-                Hari kerja
+                Tanggal tertentu
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {DAYS.map((d, i) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => toggleDay(i)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.includes(i) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-xs text-slate-400">Kosongkan semua = setiap hari.</p>
+            {form.kind === 'weekly' ? (
+              <>
+                <span className="mb-1.5 block text-sm font-medium text-slate-600">Ulangi pada hari</span>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, days: [] }))}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.length === 0 ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                  >
+                    Setiap hari
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, days: [...WORKDAYS] }))}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.length === 5 && WORKDAYS.every((d) => form.days.includes(d)) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                  >
+                    Hari kerja
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS.map((d, i) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => toggleDay(i)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.includes(i) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">Kosongkan semua = setiap hari.</p>
+              </>
+            ) : (
+              <Input
+                label="Tanggal"
+                type="date"
+                value={form.targetDate}
+                onChange={(e) => setForm({ ...form, targetDate: e.target.value })}
+              />
+            )}
           </div>
           <Input
             label="Jam (opsional)"
