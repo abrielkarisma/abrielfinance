@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 import api, { fmtIDR } from '../lib/api.js'
 import { Card } from '../components/ui.jsx'
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
+  CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts'
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 const INCOME_COLOR = '#10b981'
 const EXPENSE_COLOR = '#f43f5e'
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const WINDOW = 6   // jumlah bulan yang tampil sekaligus
+const STEP = 3     // berapa bulan bergeser tiap klik
+const MAX_BACK = 60 // maksimal mundur (bulan)
 
 function monthDelta(date, delta) {
   const d = new Date(date)
@@ -19,139 +22,181 @@ function monthDelta(date, delta) {
 
 export default function Grafik() {
   const now = new Date()
+  const [back, setBack] = useState(0) // bulan terbaru pada window, dihitung mundur dari sekarang
   const [trend, setTrend] = useState([])
+  const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(() => now.toISOString().slice(0, 7))
   const [cats, setCats] = useState([])
   const [balancePie, setBalancePie] = useState([])
 
   useEffect(() => {
+    let alive = true
     const arr = []
-    for (let i = 5; i >= 0; i--) {
-      const d = monthDelta(now, -i)
-      arr.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: MONTHS[d.getMonth()] })
-    }
-    Promise.all(
-      arr.map(async ({ key, label }) => {
-        const y = Number(key.slice(0, 4))
-        const m = Number(key.slice(5))
-        const r = await api.get('/reports/summary', { params: { year: y, month: m } })
-        return { name: label, income: r.data.total_income || 0, expense: r.data.total_expense || 0 }
+    for (let i = 0; i < WINDOW; i++) {
+      const d = monthDelta(now, -(back + i))
+      arr.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: MONTHS[d.getMonth()],
+        year: d.getFullYear()
       })
-    ).then(setTrend).catch(() => {})
-  }, [])
+    }
+    setLoading(true)
+    Promise.all(arr.map(async ({ key }) => {
+      const y = Number(key.slice(0, 4))
+      const m = Number(key.slice(5))
+      const r = await api.get('/reports/summary', { params: { year: y, month: m } })
+      return r.data
+    }))
+      .then((rows) => {
+        if (!alive) return
+        setTrend(rows.map((row, idx) => ({
+          name: `${arr[idx].label} ${String(arr[idx].year).slice(2)}`,
+          income: row.total_income || 0,
+          expense: row.total_expense || 0,
+          key: arr[idx].key
+        })))
+      })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [back])
 
   useEffect(() => {
     const [y, m] = month.split('-').map(Number)
-    api.get('/reports/summary', { params: { year: y, month: m } })
-      .then((r) => setCats((r.data.by_category || []).filter((c) => c.category?.kind === 'expense')))
-      .catch(() => {})
+    api.get('/reports/summary', { params: { year: y, month: m } }).then((r) => setCats(r.data.by_category || [])).catch(() => {})
   }, [month])
 
   useEffect(() => {
-    api.get('/reports/accounts')
-      .then((r) => setBalancePie((r.data.accounts || []).filter((a) => a.balance !== 0)))
-      .catch(() => {})
+    api.get('/reports/accounts').then((r) => setBalancePie(r.data.accounts || [])).catch(() => {})
   }, [])
 
+  const expenseByCat = cats.filter((c) => c.category?.kind === 'expense')
+  const balData = balancePie.map((a) => ({ name: a.account.name, value: a.balance, color: a.account.color }))
   const totalIncome = trend.reduce((s, t) => s + t.income, 0)
   const totalExpense = trend.reduce((s, t) => s + t.expense, 0)
 
+  const dNew = monthDelta(now, -back)
+  const dOld = monthDelta(now, -(back + WINDOW - 1))
+  const rangeText = `${MONTHS[dOld.getMonth()]} ${dOld.getFullYear()} – ${MONTHS[dNew.getMonth()]} ${dNew.getFullYear()}`
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Grafik</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Grafik</h1>
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
-          <p className="text-sm text-slate-500">Pemasukan (6 bulan terakhir)</p>
+          <p className="text-sm text-slate-500">Pemasukan ({WINDOW} bulan tampil)</p>
           <p className="mt-1 text-2xl font-bold text-emerald-600">{fmtIDR(totalIncome)}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-500">Pengeluaran (6 bulan terakhir)</p>
+          <p className="text-sm text-slate-500">Pengeluaran ({WINDOW} bulan tampil)</p>
           <p className="mt-1 text-2xl font-bold text-rose-600">{fmtIDR(totalExpense)}</p>
         </Card>
       </div>
 
       <Card>
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Pemasukan vs Pengeluaran (6 bulan)</h2>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={trend} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={55} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}rb` : v)} />
-              <Tooltip formatter={(v) => fmtIDR(v)} />
-              <Legend />
-              <Bar dataKey="income" name="Pemasukan" fill={INCOME_COLOR} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expense" name="Pengeluaran" fill={EXPENSE_COLOR} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-700">Pemasukan vs Pengeluaran</h2>
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={back >= MAX_BACK}
+              onClick={() => setBack((b) => Math.min(b + STEP, MAX_BACK))}
+              className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            >
+              ◀ Lebih lama
+            </button>
+            <span className="px-1 text-xs font-semibold text-slate-500">{rangeText}</span>
+            <button
+              disabled={back === 0}
+              onClick={() => setBack((b) => Math.max(b - STEP, 0))}
+              className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Terbaru ▶
+            </button>
+          </div>
+        </div>
+        <p className="mb-3 text-xs text-slate-400">Geser untuk melihat bulan-bulan sebelumnya.</p>
+        <div className="h-64">
+          {loading && trend.length === 0 ? (
+            <p className="py-20 text-center text-sm text-slate-400">Memuat…</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis width={52} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}rb` : v)} />
+                <Tooltip formatter={(v) => fmtIDR(v)} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line type="monotone" dataKey="income" name="Pemasukan" stroke={INCOME_COLOR} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke={EXPENSE_COLOR} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-700">Pengeluaran per Kategori</h2>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-emerald-500"
-            />
-          </div>
-          {cats.length === 0 ? (
-            <p className="py-12 text-center text-sm text-slate-400">Belum ada data pengeluaran bulan ini.</p>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Pengeluaran per Kategori</h2>
+          {expenseByCat.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-400">Belum ada data pengeluaran bulan ini.</p>
           ) : (
-            <>
-              <div className="h-52">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={cats} dataKey="total" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                      {cats.map((c, i) => <Cell key={i} fill={c.category.color} />)}
-                    </Pie>
-                    <Tooltip formatter={(v) => fmtIDR(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-2 space-y-1">
-                {cats.map((c) => (
-                  <div key={c.category.id} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.category.color }} />
-                      {c.category.name}
-                    </span>
-                    <span className="font-medium text-slate-700">{fmtIDR(c.total)}</span>
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={expenseByCat} dataKey="total" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2} isAnimationActive={false}>
+                    {expenseByCat.map((c, i) => <Cell key={i} fill={c.category.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => fmtIDR(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           )}
+          <div className="mt-2 space-y-1">
+            {expenseByCat.map((c) => (
+              <div key={c.category.id} className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.category.color }} />
+                  {c.category.name}
+                </span>
+                <span className="font-medium text-slate-700">{fmtIDR(c.total)}</span>
+              </div>
+            ))}
+          </div>
         </Card>
 
         <Card>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Distribusi Saldo per Akun</h2>
-          {balancePie.length === 0 ? (
-            <p className="py-12 text-center text-sm text-slate-400">Belum ada saldo akun.</p>
+          {balData.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-400">Belum ada akun.</p>
           ) : (
             <>
-              <div className="h-52">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={balancePie} dataKey="balance" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                      {balancePie.map((a, i) => <Cell key={i} fill={a.account.color} />)}
+                    <Pie data={balData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2} isAnimationActive={false}>
+                      {balData.map((d, i) => <Cell key={i} fill={d.color} />)}
                     </Pie>
                     <Tooltip formatter={(v) => fmtIDR(v)} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div className="mt-2 space-y-1">
-                {balancePie.map((a) => (
-                  <div key={a.account.id} className="flex items-center justify-between text-sm">
+                {balData.map((d) => (
+                  <div key={d.name} className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: a.account.color }} />
-                      {a.account.name}
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                      {d.name}
                     </span>
-                    <span className="font-medium text-slate-700">{fmtIDR(a.balance)}</span>
+                    <span className="font-medium text-slate-700">{fmtIDR(d.value)}</span>
                   </div>
                 ))}
               </div>

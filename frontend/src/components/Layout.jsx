@@ -45,8 +45,8 @@ export default function Layout() {
         <div className="flex items-center gap-2 px-5 py-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold">K</div>
           <div>
-            <div className="text-sm font-bold">Keuangan</div>
-            <div className="text-xs text-slate-500">Pribadi</div>
+            <div className="text-sm font-bold">MyFinance</div>
+            <div className="text-xs text-slate-500">Personal Finance</div>
           </div>
         </div>
         <div className="px-3 pb-3">
@@ -128,7 +128,7 @@ export default function Layout() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-sm text-white font-bold">K</div>
-          <span className="text-sm font-bold">Keuangan Pribadi</span>
+          <span className="text-sm font-bold">MyFinance</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="max-w-28 truncate text-sm font-medium text-slate-700">{user?.name}</span>

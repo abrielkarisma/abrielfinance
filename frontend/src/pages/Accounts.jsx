@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg, fmtIDR } from '../lib/api.js'
-import { Button, Card, Input, Modal, Select } from '../components/ui.jsx'
+import { Button, Card, ColorPicker, Input, Modal, Select } from '../components/ui.jsx'
 
 const TYPE_LABEL = { bank: 'Bank', ewallet: 'E-Wallet', cash: 'Tunai' }
 const PALETTE = ['#f97316', '#3b82f6', '#ec4899', '#a855f7', '#ef4444', '#14b8a6', '#22c55e', '#84cc16', '#eab308', '#64748b']
@@ -106,20 +106,7 @@ export default function Accounts() {
             <option value="ewallet">E-Wallet</option>
             <option value="cash">Tunai</option>
           </Select>
-          <div>
-            <span className="mb-1 block text-sm font-medium text-slate-600">Warna</span>
-            <div className="flex flex-wrap gap-2">
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setForm({ ...form, color: c })}
-                  className={`h-7 w-7 rounded-full ${form.color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
+          <ColorPicker value={form.color} onChange={(c) => setForm({ ...form, color: c })} />
           <Input label="Saldo Awal (Rp)" type="number" min="0" step="1000" value={form.opening_balance} onChange={(e) => setForm({ ...form, opening_balance: e.target.value })} />
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">

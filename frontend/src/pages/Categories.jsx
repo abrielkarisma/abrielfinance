@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg } from '../lib/api.js'
-import { Button, Card, Input, Modal } from '../components/ui.jsx'
+import { Button, Card, ColorPicker, Input, Modal } from '../components/ui.jsx'
 
 const COLORS = ['#f97316', '#3b82f6', '#ec4899', '#a855f7', '#ef4444', '#14b8a6', '#f59e0b', '#22c55e', '#84cc16', '#64748b']
 const KIND_LABEL = { income: 'Pemasukan', expense: 'Pengeluaran' }
@@ -98,20 +98,7 @@ export default function Categories() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Kategori' : 'Tambah Kategori'}>
         <form onSubmit={submit} className="space-y-4">
           <Input label="Nama Kategori" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <div>
-            <span className="mb-1 block text-sm font-medium text-slate-600">Warna</span>
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setForm({ ...form, color: c })}
-                  className={`h-7 w-7 rounded-full ${form.color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
+          <ColorPicker value={form.color} onChange={(c) => setForm({ ...form, color: c })} />
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>

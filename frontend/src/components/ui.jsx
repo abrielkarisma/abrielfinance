@@ -2,6 +2,11 @@ export function cn(...parts) {
   return parts.filter(Boolean).join(' ')
 }
 
+export const PALETTE = [
+  '#f97316', '#3b82f6', '#ec4899', '#a855f7', '#ef4444',
+  '#14b8a6', '#f59e0b', '#22c55e', '#84cc16', '#64748b'
+]
+
 export function Button({ variant = 'primary', className = '', ...props }) {
   const base =
     'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none'
@@ -63,12 +68,48 @@ export function Badge({ color = '#64748b', children }) {
   )
 }
 
+// Custom color picker: preset swatches + a native "any color" input.
+export function ColorPicker({ value, onChange }) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-slate-600">Warna</span>
+      <div className="flex flex-wrap items-center gap-2">
+        {PALETTE.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className={`h-7 w-7 rounded-full transition-transform hover:scale-110 ${value === c ? 'ring-2 ring-offset-2 ring-slate-500' : ''}`}
+            style={{ backgroundColor: c }}
+            aria-label={`Warna ${c}`}
+          />
+        ))}
+        <label
+          className="relative h-8 w-8 cursor-pointer rounded-full ring-1 ring-slate-300"
+          style={{ backgroundColor: value }}
+          title="Pilih warna lain"
+        >
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-white drop-shadow">
+            ＋
+          </span>
+        </label>
+      </div>
+    </div>
+  )
+}
+
 export function Modal({ open, onClose, title, children }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button className="text-slate-400 hover:text-slate-600" onClick={onClose} aria-label="Tutup">
