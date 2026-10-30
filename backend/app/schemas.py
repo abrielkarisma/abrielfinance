@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class UserCreate(BaseModel):
@@ -161,3 +161,39 @@ class AccountBalance(BaseModel):
 class AccountsSummary(BaseModel):
     accounts: list[AccountBalance]
     total_balance: float
+
+
+class ReminderCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=150)
+    note: Optional[str] = Field(default=None, max_length=500)
+    days_of_week: list[int] = Field(default_factory=list)  # Mon=0..Sun=6; kosong = setiap hari
+    time: Optional[str] = Field(default=None, pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$")
+    enabled: bool = True
+
+
+class ReminderUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=150)
+    note: Optional[str] = Field(default=None, max_length=500)
+    days_of_week: Optional[list[int]] = None
+    time: Optional[str] = Field(default=None, pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$")
+    enabled: Optional[bool] = None
+
+
+class ReminderOut(BaseModel):
+    id: int
+    title: str
+    note: Optional[str] = None
+    days_of_week: list[int]
+    time: Optional[str] = None
+    enabled: bool
+    created_at: datetime
+
+    @field_validator("days_of_week", mode="before")
+    @classmethod
+    def _parse_days(cls, v):
+        if isinstance(v, str):
+            return [int(x) for x in v.split(",") if x.strip() != ""]
+        return v
+
+    class Config:
+        from_attributes = True

@@ -78,6 +78,8 @@ def summary(
 
 @router.get("/accounts", response_model=AccountsSummary)
 def accounts_summary(
+    year: int | None = None,
+    month: int | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -87,7 +89,11 @@ def accounts_summary(
         .order_by(Account.created_at)
         .all()
     )
-    txns = db.query(Transaction).filter(Transaction.user_id == user.id).all()
+    txq = db.query(Transaction).filter(Transaction.user_id == user.id)
+    if year and month:
+        _, end = _month_range(year, month)
+        txq = txq.filter(Transaction.date < end)
+    txns = txq.all()
 
     by_acc: dict[int, dict[str, float]] = {}
     for t in txns:

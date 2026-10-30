@@ -16,3 +16,27 @@ body {
 * {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+
+/* ==== Dark mode overrides (toggle `.dark` pada <html>) ==== */
+.dark { color-scheme: dark; }
+.dark body { background-color: #0f172a; color: #e2e8f0; }
+.dark .bg-white { background-color: #1e293b; }
+.dark .bg-slate-50 { background-color: #0f172a; }
+.dark .bg-slate-100 { background-color: #0f172a; }
+.dark .hover\:bg-slate-100:hover { background-color: #334155; }
+.dark .hover\:bg-slate-50:hover { background-color: #263449; }
+.dark .text-slate-400 { color: #94a3b8; }
+.dark .text-slate-500 { color: #94a3b8; }
+.dark .text-slate-600 { color: #cbd5e1; }
+.dark .text-slate-700 { color: #e2e8f0; }
+.dark .text-slate-800 { color: #e2e8f0; }
+.dark .text-slate-900 { color: #f1f5f9; }
+.dark .border-slate-200 { border-color: #334155; }
+.dark .border-slate-300 { border-color: #475569; }
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #334155; }
+.dark .ring-slate-200 { --tw-ring-opacity: 1; --tw-ring-color: #334155; }
+.dark .bg-emerald-50 { background-color: #052e24; }
+.dark .text-emerald-600 { color: #34d399; }
+.dark .text-emerald-700 { color: #6ee7b7; }
+.dark .text-rose-600 { color: #fb7185; }
+.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }

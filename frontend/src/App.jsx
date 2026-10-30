@@ -8,6 +8,7 @@ import Transactions from './pages/Transactions.jsx'
 import Grafik from './pages/Grafik.jsx'
 import Accounts from './pages/Accounts.jsx'
 import Categories from './pages/Categories.jsx'
+import Reminders from './pages/Reminders.jsx'
 
 function Protected({ children }) {
   const { user } = useAuth()
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="grafik" element={<Grafik />} />
           <Route path="accounts" element={<Accounts />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="reminders" element={<Reminders />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

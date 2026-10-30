@@ -1,213 +1,217 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import api from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import { Button, cn } from './ui.jsx'
 import TransactionModal from './TransactionModal.jsx'
 
 const primaryLinks = [
-  { to: '/', label: 'Dashboard', icon: '▦' },
-  { to: '/transactions', label: 'Transaksi', icon: '⇅' },
-  { to: '/grafik', label: 'Grafik', icon: '📊' }
+  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/transactions', label: 'Transaksi', icon: '🧾' },
+  { to: '/grafik', label: 'Grafik', icon: '📈' }
 ]
+
 const masterLinks = [
-  { to: '/accounts', label: 'Rekening', icon: '◫' },
-  { to: '/categories', label: 'Kategori', icon: '▤' }
+  { to: '/accounts', label: 'Rekening', icon: '🏦' },
+  { to: '/categories', label: 'Kategori', icon: '🏷️' }
 ]
+
+function NavItem({ link }) {
+  return (
+    <NavLink
+      to={link.to}
+      end={link.to === '/'}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+          isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
+        }`
+      }
+    >
+      <span className="text-base">{link.icon}</span>
+      {link.label}
+    </NavLink>
+  )
+}
 
 export default function Layout() {
-  const { user, logout } = useAuth()
-  const nav = useNavigate()
-  const loc = useLocation()
-  const [masterOpen, setMasterOpen] = useState(() => /^\/(accounts|categories)(\/|$)/.test(loc.pathname))
-  const [mobileSheet, setMobileSheet] = useState(false)
+  const { logout } = useAuth()
+  const navigate = useNavigate()
   const [addOpen, setAddOpen] = useState(false)
+  const [dark, setDark] = useState(() => localStorage.getItem('myfinance-theme') === 'dark')
+  const [dueCount, setDueCount] = useState(0)
 
-  const masterActive = masterLinks.some((l) => loc.pathname.startsWith(l.to))
   useEffect(() => {
-    if (masterActive) setMasterOpen(true)
-  }, [masterActive])
+    document.documentElement.classList.toggle('dark', dark)
+    localStorage.setItem('myfinance-theme', dark ? 'dark' : 'light')
+  }, [dark])
 
-  const doLogout = () => {
-    logout()
-    nav('/login')
-  }
+  useEffect(() => {
+    let alive = true
+    const check = async () => {
+      try {
+        const now = new Date()
+        const y = now.getFullYear()
+        const m = String(now.getMonth() + 1).padStart(2, '0')
+        const d = String(now.getDate()).padStart(2, '0')
+        const today = `${y}-${m}-${d}`
+        const { data } = await api.get('/reminders/due', { params: { date_str: today } })
+        if (!alive) return
+        const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+        const due = data.filter((r) => !r.time || r.time <= hm)
+        setDueCount(due.length)
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          due.forEach((r) => {
+            const key = `shownR-${r.id}-${today}`
+            if (!localStorage.getItem(key)) {
+              new Notification(r.title, { body: r.note || 'Pengingat', tag: `r-${r.id}-${today}` })
+              localStorage.setItem(key, '1')
+            }
+          })
+        }
+      } catch {}
+    }
+    check()
+    const iv = setInterval(check, 60000)
+    return () => { alive = false; clearInterval(iv) }
+  }, [])
 
-  const onSaved = () => {
-    setAddOpen(false)
-    window.dispatchEvent(new Event('tx-changed'))
-    nav('/transactions')
-  }
+  const bell = (
+    <span className="relative inline-flex">
+      <span>🔔</span>
+      {dueCount > 0 && (
+        <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+          {dueCount}
+        </span>
+      )}
+    </span>
+  )
 
   return (
-    <div className="min-h-screen lg:flex">
-      {/* Sidebar: desktop */}
-      <aside className="sticky top-0 hidden h-screen w-60 flex-col border-r border-slate-200 bg-white lg:flex">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold">K</div>
-          <div>
-            <div className="text-sm font-bold">MyFinance</div>
-            <div className="text-xs text-slate-500">Personal Finance</div>
+    <div className="min-h-screen bg-slate-50">
+      {/* ===== Sidebar (desktop) ===== */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-lg font-bold text-white">K</span>
+          <div className="leading-tight">
+            <div className="text-base font-bold text-slate-900">MyFinance</div>
+            <div className="text-xs text-slate-400">Personal Finance</div>
           </div>
         </div>
-        <div className="px-3 pb-3">
-          <Button onClick={() => setAddOpen(true)} className="w-full">
-            + Tambah Transaksi
-          </Button>
-        </div>
-        <nav className="flex-1 space-y-1 px-3">
-          {primaryLinks.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
-                )
-              }
-            >
-              <span className="text-base">{l.icon}</span>
-              {l.label}
-            </NavLink>
-          ))}
 
-          <div className="pt-1">
-            <button
-              onClick={() => setMasterOpen((o) => !o)}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                masterActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
-              )}
-            >
-              <span className="text-base">🗂</span>
-              Data Master
-              <span className={`ml-auto text-xs transition-transform ${masterOpen ? 'rotate-180' : ''}`}>▼</span>
-            </button>
-            {masterOpen && (
-              <div className="mt-1 space-y-1 border-l border-slate-200 pl-3">
-                {masterLinks.map((l) => (
-                  <NavLink
-                    key={l.to}
-                    to={l.to}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                        isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
-                      )
-                    }
-                  >
-                    <span className="text-base">{l.icon}</span>
-                    {l.label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
-        </nav>
-        <div className="border-t border-slate-200 p-4">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold">
-              {user?.name?.[0]?.toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{user?.name}</div>
-              <div className="truncate text-xs text-slate-500">{user?.email}</div>
-            </div>
-          </div>
-          <button
-            onClick={doLogout}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Menu</div>
+          {primaryLinks.map((l) => <NavItem key={l.to} link={l} />)}
+
+          <div className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Data Master</div>
+          {masterLinks.map((l) => <NavItem key={l.to} link={l} />)}
+
+          <NavLink
+            to="/reminders"
+            className={({ isActive }) =>
+              `mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isActive ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
+              }`
+            }
           >
-            Keluar
+            {bell}
+            Pengingat
+          </NavLink>
+        </nav>
+
+        <div className="border-t border-slate-200 px-4 py-4">
+          <button
+            onClick={() => setDark((d) => !d)}
+            className="mb-3 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            <span>{dark ? 'Mode Terang' : 'Mode Gelap'}</span>
+            <span>{dark ? '☀️' : '🌙'}</span>
+          </button>
+          <button
+            onClick={() => { logout(); navigate('/login') }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+          >
+            <span>🚪</span> Keluar
           </button>
         </div>
       </aside>
 
-      {/* Header: mobile */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-sm text-white font-bold">K</div>
-          <span className="text-sm font-bold">MyFinance</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="max-w-28 truncate text-sm font-medium text-slate-700">{user?.name}</span>
-          <button onClick={doLogout} className="text-xs font-medium text-slate-500 hover:text-rose-600">Keluar</button>
+      {/* ===== Header (mobile) ===== */}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+        <div className="flex items-center justify-between">
+          <div className="leading-tight">
+            <div className="text-base font-bold text-slate-900">MyFinance</div>
+            <div className="text-xs text-slate-400">Personal Finance</div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setDark((d) => !d)}
+              className="text-lg"
+              aria-label="Toggle tema"
+            >
+              {dark ? '☀️' : '🌙'}
+            </button>
+            <NavLink to="/reminders" aria-label="Pengingat">
+              {bell}
+            </NavLink>
+            <button
+              onClick={() => { logout(); navigate('/login') }}
+              className="text-sm text-slate-500"
+            >
+              Keluar
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 p-4 pb-24 lg:p-8 lg:pb-8">
-        <Outlet />
+      {/* ===== Main ===== */}
+      <main className="px-4 pb-28 pt-6 lg:pl-72 lg:pr-8 lg:pb-12 lg:pt-8">
+        <div className="mx-auto max-w-5xl">
+          <Outlet />
+        </div>
       </main>
 
-      {/* Bottom nav: mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {/* Center FAB for add transaction */}
-        <button
-          onClick={() => setAddOpen(true)}
-          className="absolute left-1/2 -top-7 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5"
-        >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-2xl text-white shadow-lg ring-4 ring-white">
-            +
-          </span>
-          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shadow">
-            Tambah
-          </span>
-        </button>
-        <div className="grid grid-cols-4">
-          {primaryLinks.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex flex-col items-center gap-1 py-2.5 text-xs font-medium',
-                  isActive ? 'text-emerald-700' : 'text-slate-500'
-                )
-              }
-            >
-              <span className="text-lg leading-none">{l.icon}</span>
-              {l.label}
-            </NavLink>
-          ))}
-          <button
-            onClick={() => setMobileSheet(true)}
-            className={`flex flex-col items-center gap-1 py-2.5 text-xs font-medium ${masterActive ? 'text-emerald-700' : 'text-slate-500'}`}
+      {/* ===== Bottom nav (mobile) ===== */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {primaryLinks.map((l) => (
+          <NavLink
+            key={l.to}
+            to={l.to}
+            end={l.to === '/'}
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
+                isActive ? 'text-emerald-700' : 'text-slate-500'
+              }`
+            }
           >
-            <span className="text-lg leading-none">🗂</span>
-            Data Master
-          </button>
-        </div>
+            <span className="text-lg">{l.icon}</span>
+            {l.label}
+          </NavLink>
+        ))}
+        <NavLink
+          to="/accounts"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
+              isActive ? 'text-emerald-700' : 'text-slate-500'
+            }`
+          }
+        >
+          <span className="text-lg">🏦</span>
+          Data Master
+        </NavLink>
       </nav>
 
-      {/* Mobile sheet: Data Master */}
-      {mobileSheet && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setMobileSheet(false)} />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-4 pb-[env(safe-area-inset-bottom)]">
-            <div className="mb-2 text-center text-sm font-bold text-slate-700">Data Master</div>
-            {masterLinks.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                onClick={() => setMobileSheet(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'mt-2 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium',
-                    isActive ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-700'
-                  )
-                }
-              >
-                <span className="text-base">{l.icon}</span>
-                {l.label}
-              </NavLink>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ===== FAB (mobile) ===== */}
+      <button
+        onClick={() => setAddOpen(true)}
+        className="fixed bottom-16 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-1"
+        aria-label="Tambah transaksi"
+      >
+        <span className="-top-7 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white shadow-lg transition-transform hover:scale-105">
+          +
+        </span>
+        <span className="text-xs font-medium text-slate-500">Tambah</span>
+      </button>
 
-      <TransactionModal open={addOpen} onClose={() => setAddOpen(false)} onSaved={onSaved} />
+      <TransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   )
 }

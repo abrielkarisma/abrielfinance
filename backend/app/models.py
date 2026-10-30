@@ -24,6 +24,9 @@ class User(Base):
     accounts = relationship(
         "Account", back_populates="user", cascade="all, delete-orphan"
     )
+    reminders = relationship(
+        "Reminder", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Account(Base):
@@ -82,3 +85,18 @@ class Transaction(Base):
     account = relationship("Account", foreign_keys=[account_id], back_populates="transactions")
     to_account = relationship("Account", foreign_keys=[to_account_id])
     category = relationship("Category", back_populates="transactions")
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(150))
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    days_of_week: Mapped[str] = mapped_column(String(30), default="")  # "0,1,2" Mon=0..Sun=6; kosong = setiap hari
+    time: Mapped[str | None] = mapped_column(String(5), nullable=True)  # HH:mm
+    enabled: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="reminders")

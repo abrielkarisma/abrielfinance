@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from . import models  # noqa: F401 — daftarkan model ke metadata
 from .db import Base, engine
-from .routers import accounts, auth, categories, reports, transactions
+from .routers import accounts, auth, categories, reminders, reports, transactions
 
 DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -41,6 +41,7 @@ app.include_router(accounts.router)
 app.include_router(categories.router)
 app.include_router(transactions.router)
 app.include_router(reports.router)
+app.include_router(reminders.router)
 
 
 if DIST.is_dir():

@@ -20,12 +20,26 @@ function monthDelta(date, delta) {
   return d
 }
 
+function MonthInput({ value, onChange }) {
+  return (
+    <input
+      type="month"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+    />
+  )
+}
+
 export default function Grafik() {
   const now = new Date()
-  const [back, setBack] = useState(0) // bulan terbaru pada window, dihitung mundur dari sekarang
+  const [back, setBack] = useState(0)
   const [trend, setTrend] = useState([])
   const [loading, setLoading] = useState(true)
-  const [month, setMonth] = useState(() => now.toISOString().slice(0, 7))
+  const [showIncome, setShowIncome] = useState(true)
+  const [showExpense, setShowExpense] = useState(true)
+  const [catMonth, setCatMonth] = useState(() => now.toISOString().slice(0, 7))
+  const [accMonth, setAccMonth] = useState(() => now.toISOString().slice(0, 7))
   const [cats, setCats] = useState([])
   const [balancePie, setBalancePie] = useState([])
 
@@ -62,13 +76,16 @@ export default function Grafik() {
   }, [back])
 
   useEffect(() => {
-    const [y, m] = month.split('-').map(Number)
-    api.get('/reports/summary', { params: { year: y, month: m } }).then((r) => setCats(r.data.by_category || [])).catch(() => {})
-  }, [month])
+    const [y, m] = catMonth.split('-').map(Number)
+    api.get('/reports/summary', { params: { year: y, month: m } })
+      .then((r) => setCats(r.data.by_category || [])).catch(() => {})
+  }, [catMonth])
 
   useEffect(() => {
-    api.get('/reports/accounts').then((r) => setBalancePie(r.data.accounts || [])).catch(() => {})
-  }, [])
+    const [y, m] = accMonth.split('-').map(Number)
+    api.get('/reports/accounts', { params: { year: y, month: m } })
+      .then((r) => setBalancePie(r.data.accounts || [])).catch(() => {})
+  }, [accMonth])
 
   const expenseByCat = cats.filter((c) => c.category?.kind === 'expense')
   const balData = balancePie.map((a) => ({ name: a.account.name, value: a.balance, color: a.account.color }))
@@ -79,17 +96,20 @@ export default function Grafik() {
   const dOld = monthDelta(now, -(back + WINDOW - 1))
   const rangeText = `${MONTHS[dOld.getMonth()]} ${dOld.getFullYear()} – ${MONTHS[dNew.getMonth()]} ${dNew.getFullYear()}`
 
+  const chip = (on, setOn, colorOn, label) => (
+    <button
+      onClick={() => setOn((s) => !s)}
+      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+        on ? colorOn : 'border-slate-300 text-slate-500'
+      }`}
+    >
+      {on ? '✓ ' : '○ '}{label}
+    </button>
+  )
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Grafik</h1>
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-        />
-      </div>
+      <h1 className="text-2xl font-bold">Grafik</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
@@ -104,7 +124,13 @@ export default function Grafik() {
 
       <Card>
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">Pemasukan vs Pengeluaran</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-700">Pemasukan vs Pengeluaran</h2>
+            <div className="flex items-center gap-1.5">
+              {chip(showIncome, setShowIncome, 'border-emerald-500 bg-emerald-50 text-emerald-700', 'Pemasukan')}
+              {chip(showExpense, setShowExpense, 'border-rose-500 bg-rose-50 text-rose-600', 'Pengeluaran')}
+            </div>
+          </div>
           <div className="flex items-center gap-1.5">
             <button
               disabled={back >= MAX_BACK}
@@ -123,7 +149,7 @@ export default function Grafik() {
             </button>
           </div>
         </div>
-        <p className="mb-3 text-xs text-slate-400">Geser untuk melihat bulan-bulan sebelumnya.</p>
+        <p className="mb-3 text-xs text-slate-400">Geser untuk melihat bulan-bulan sebelumnya. Klik chip untuk tampil/sembunyikan garis.</p>
         <div className="h-64">
           {loading && trend.length === 0 ? (
             <p className="py-20 text-center text-sm text-slate-400">Memuat…</p>
@@ -135,8 +161,12 @@ export default function Grafik() {
                 <YAxis width={52} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}rb` : v)} />
                 <Tooltip formatter={(v) => fmtIDR(v)} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="income" name="Pemasukan" stroke={INCOME_COLOR} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke={EXPENSE_COLOR} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                {showIncome && (
+                  <Line type="monotone" dataKey="income" name="Pemasukan" stroke={INCOME_COLOR} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                )}
+                {showExpense && (
+                  <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke={EXPENSE_COLOR} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                )}
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -145,7 +175,10 @@ export default function Grafik() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Pengeluaran per Kategori</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Pengeluaran per Kategori</h2>
+            <MonthInput value={catMonth} onChange={setCatMonth} />
+          </div>
           {expenseByCat.length === 0 ? (
             <p className="py-10 text-center text-sm text-slate-400">Belum ada data pengeluaran bulan ini.</p>
           ) : (
@@ -174,7 +207,10 @@ export default function Grafik() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Distribusi Saldo per Akun</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Distribusi Saldo per Akun</h2>
+            <MonthInput value={accMonth} onChange={setAccMonth} />
+          </div>
           {balData.length === 0 ? (
             <p className="py-10 text-center text-sm text-slate-400">Belum ada akun.</p>
           ) : (
