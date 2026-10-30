@@ -56,7 +56,13 @@ def create_transaction(
     db: Session = Depends(get_db),
 ):
     _check_account(db, user, payload.account_id)
-    if payload.category_id is not None:
+    if payload.kind == "transfer":
+        if payload.to_account_id is None:
+            raise HTTPException(status_code=400, detail="Pilih akun tujuan untuk pindah dana")
+        _check_account(db, user, payload.to_account_id)
+        if payload.to_account_id == payload.account_id:
+            raise HTTPException(status_code=400, detail="Akun asal dan tujuan harus berbeda")
+    elif payload.category_id is not None:
         cat = db.get(Category, payload.category_id)
         if not cat or cat.user_id != user.id or cat.kind != payload.kind:
             raise HTTPException(status_code=400, detail="Kategori tidak valid")
@@ -79,7 +85,15 @@ def update_transaction(
     kind = data.get("kind", tx.kind)
     if data.get("account_id") is not None:
         _check_account(db, user, data["account_id"])
-    if data.get("category_id") is not None:
+    if kind == "transfer":
+        to_acc = data.get("to_account_id", tx.to_account_id)
+        if to_acc is None:
+            raise HTTPException(status_code=400, detail="Pilih akun tujuan untuk pindah dana")
+        _check_account(db, user, to_acc)
+        src = data.get("account_id", tx.account_id)
+        if to_acc == src:
+            raise HTTPException(status_code=400, detail="Akun asal dan tujuan harus berbeda")
+    elif data.get("category_id") is not None:
         cat = db.get(Category, data["category_id"])
         if not cat or cat.user_id != user.id or cat.kind != kind:
             raise HTTPException(status_code=400, detail="Kategori tidak valid")

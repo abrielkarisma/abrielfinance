@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class UserCreate(BaseModel):
@@ -91,19 +91,30 @@ class CategoryOut(BaseModel):
 
 
 class TransactionCreate(BaseModel):
-    kind: str = Field(pattern="^(expense|income)$")
+    kind: str = Field(pattern="^(expense|income|transfer)$")
     amount: float = Field(gt=0)
     date: date
     account_id: int
+    to_account_id: Optional[int] = None
     category_id: Optional[int] = None
     note: Optional[str] = Field(default=None, max_length=500)
 
+    @model_validator(mode="after")
+    def _validate_transfer(self):
+        if self.kind == "transfer":
+            if self.to_account_id is None:
+                raise ValueError("Pilih akun tujuan untuk pindah dana")
+            if self.to_account_id == self.account_id:
+                raise ValueError("Akun asal dan tujuan harus berbeda")
+        return self
+
 
 class TransactionUpdate(BaseModel):
-    kind: Optional[str] = Field(default=None, pattern="^(expense|income)$")
+    kind: Optional[str] = Field(default=None, pattern="^(expense|income|transfer)$")
     amount: Optional[float] = Field(default=None, gt=0)
     date: Optional[date] = None
     account_id: Optional[int] = None
+    to_account_id: Optional[int] = None
     category_id: Optional[int] = None
     note: Optional[str] = Field(default=None, max_length=500)
 
@@ -114,9 +125,11 @@ class TransactionOut(BaseModel):
     amount: float
     date: date
     account_id: int
+    to_account_id: Optional[int] = None
     category_id: Optional[int] = None
     note: Optional[str] = None
     account: Optional[AccountOut] = None
+    to_account: Optional[AccountOut] = None
     category: Optional[CategoryOut] = None
 
     class Config:
@@ -140,6 +153,8 @@ class AccountBalance(BaseModel):
     opening_balance: float
     total_income: float
     total_expense: float
+    total_transfer_out: float = 0
+    total_transfer_in: float = 0
     balance: float
 
 

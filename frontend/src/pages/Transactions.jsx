@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react'
 import api, { errMsg, fmtIDR } from '../lib/api.js'
 import { Badge, Button, Card, Input, Modal, Select } from '../components/ui.jsx'
 
+const KIND_META = {
+  expense: { label: 'Pengeluaran', color: '#f43f5e' },
+  income: { label: 'Pemasukan', color: '#10b981' },
+  transfer: { label: 'Pindah Dana', color: '#6366f1' }
+}
+
 const emptyForm = {
   kind: 'expense',
   amount: '',
   date: new Date().toISOString().slice(0, 10),
   category_id: '',
   account_id: '',
+  to_account_id: '',
   note: ''
 }
 
@@ -71,10 +78,19 @@ export default function Transactions() {
       date: t.date,
       category_id: t.category_id ?? '',
       account_id: t.account_id,
+      to_account_id: t.to_account_id ?? '',
       note: t.note || ''
     })
     setErr('')
     setModalOpen(true)
+  }
+
+  const setKind = (kind) => {
+    if (kind === 'transfer') {
+      setForm({ ...form, kind, category_id: '', to_account_id: form.account_id || '' })
+    } else {
+      setForm({ ...form, kind, to_account_id: '' })
+    }
   }
 
   const submit = async (e) => {
@@ -84,6 +100,7 @@ export default function Transactions() {
       amount: Number(form.amount),
       date: form.date,
       account_id: Number(form.account_id),
+      to_account_id: form.kind === 'transfer' && form.to_account_id ? Number(form.to_account_id) : null,
       category_id: form.category_id ? Number(form.category_id) : null,
       note: form.note || null
     }
@@ -107,6 +124,21 @@ export default function Transactions() {
     }
   }
 
+  const toOptions = accounts.filter((a) => String(a.id) !== String(form.account_id))
+
+  const accountCell = (t) => {
+    if (t.kind === 'transfer') {
+      return (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
+          <span className="text-slate-400">→</span>
+          {t.to_account && <Badge color={t.to_account.color}>{t.to_account.name}</Badge>}
+        </span>
+      )
+    }
+    return t.account ? <Badge color={t.account.color}>{t.account.name}</Badge> : <span className="text-slate-400">—</span>
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -126,6 +158,7 @@ export default function Transactions() {
             <option value="">Semua Jenis</option>
             <option value="income">Pemasukan</option>
             <option value="expense">Pengeluaran</option>
+            <option value="transfer">Pindah Dana</option>
           </Select>
           <Select label="Akun" value={filters.account_id} onChange={(e) => setFilter('account_id', e.target.value)} className="sm:w-48">
             <option value="">Semua Akun</option>
@@ -149,13 +182,23 @@ export default function Transactions() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs text-slate-400">{t.date}</span>
                     <div className="flex flex-wrap justify-end gap-1.5">
-                      {t.category && <Badge color={t.category.color}>{t.category.name}</Badge>}
-                      {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
+                      {t.kind === 'transfer' ? (
+                        <>
+                          {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
+                          <span className="text-xs text-slate-400">→</span>
+                          {t.to_account && <Badge color={t.to_account.color}>{t.to_account.name}</Badge>}
+                        </>
+                      ) : (
+                        <>
+                          {t.category && <Badge color={t.category.color}>{t.category.name}</Badge>}
+                          {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="truncate text-sm text-slate-600">{t.note || (t.kind === 'income' ? 'Pemasukan' : 'Pengeluaran')}</span>
-                    <span className={`text-sm font-semibold ${t.kind === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <span className="truncate text-sm text-slate-600">{t.note || KIND_META[t.kind]?.label || t.kind}</span>
+                    <span className={`text-sm font-semibold ${t.kind === 'income' ? 'text-emerald-600' : t.kind === 'expense' ? 'text-rose-600' : 'text-indigo-600'}`}>
                       {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
                     </span>
                   </div>
@@ -185,16 +228,20 @@ export default function Transactions() {
                     <tr key={t.id} className="border-b border-slate-100 last:border-0">
                       <td className="py-2.5 pr-3 text-slate-500">{t.date}</td>
                       <td className="py-2.5 pr-3">
-                        {t.kind === 'income' ? <Badge color="#10b981">Pemasukan</Badge> : <Badge color="#f43f5e">Pengeluaran</Badge>}
+                        <Badge color={KIND_META[t.kind]?.color || '#94a3b8'}>{KIND_META[t.kind]?.label || t.kind}</Badge>
                       </td>
                       <td className="py-2.5 pr-3">
-                        {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <span className="text-slate-400">—</span>}
+                        {t.kind === 'transfer' ? (
+                          <span className="text-slate-400">—</span>
+                        ) : t.category ? (
+                          <Badge color={t.category.color}>{t.category.name}</Badge>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
-                      <td className="py-2.5 pr-3">
-                        {t.account ? <Badge color={t.account.color}>{t.account.name}</Badge> : <span className="text-slate-400">—</span>}
-                      </td>
+                      <td className="py-2.5 pr-3">{accountCell(t)}</td>
                       <td className="max-w-40 truncate py-2.5 pr-3 text-slate-600">{t.note || '—'}</td>
-                      <td className={`py-2.5 text-right font-semibold ${t.kind === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      <td className={`py-2.5 text-right font-semibold ${t.kind === 'income' ? 'text-emerald-600' : t.kind === 'expense' ? 'text-rose-600' : 'text-indigo-600'}`}>
                         {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
                       </td>
                       <td className="whitespace-nowrap py-2.5 pl-3 text-right">
@@ -213,33 +260,55 @@ export default function Transactions() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Transaksi' : 'Tambah Transaksi'}>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setForm({ ...form, kind: 'expense', category_id: '' })}
-              className={`rounded-lg px-3 py-2 text-sm font-medium ${form.kind === 'expense' ? 'bg-rose-600 text-white' : 'border border-slate-300 text-slate-600'}`}
+              onClick={() => setKind('expense')}
+              className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'expense' ? 'bg-rose-600 text-white' : 'border border-slate-300 text-slate-600'}`}
             >
               Pengeluaran
             </button>
             <button
               type="button"
-              onClick={() => setForm({ ...form, kind: 'income', category_id: '' })}
-              className={`rounded-lg px-3 py-2 text-sm font-medium ${form.kind === 'income' ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-slate-600'}`}
+              onClick={() => setKind('income')}
+              className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'income' ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-slate-600'}`}
             >
               Pemasukan
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind('transfer')}
+              className={`rounded-lg px-2 py-2 text-sm font-medium ${form.kind === 'transfer' ? 'bg-indigo-600 text-white' : 'border border-slate-300 text-slate-600'}`}
+            >
+              Pindah Dana
             </button>
           </div>
           <Input label="Nominal (Rp)" type="number" min="0" step="500" required placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           <Input label="Tanggal" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          <Select label="Akun (wajib)" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
-            <option value="">Pilih akun...</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </Select>
-          <Select label="Kategori" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
-            <option value="">Tanpa kategori</option>
-            {kindCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
-          <Input label="Catatan (opsional)" placeholder="cth: Makan siang" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+          {form.kind === 'transfer' ? (
+            <>
+              <Select label="Dari Akun" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
+                <option value="">Pilih akun asal...</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </Select>
+              <Select label="Ke Akun" required value={form.to_account_id} onChange={(e) => setForm({ ...form, to_account_id: e.target.value })}>
+                <option value="">Pilih akun tujuan...</option>
+                {toOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </Select>
+            </>
+          ) : (
+            <>
+              <Select label="Akun (wajib)" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
+                <option value="">Pilih akun...</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </Select>
+              <Select label="Kategori" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+                <option value="">Tanpa kategori</option>
+                {kindCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </Select>
+            </>
+          )}
+          <Input label="Catatan (opsional)" placeholder={form.kind === 'transfer' ? 'cth: Transfer ke OVO' : 'cth: Makan siang'} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>

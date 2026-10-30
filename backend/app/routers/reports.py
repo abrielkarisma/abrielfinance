@@ -57,6 +57,8 @@ def summary(
 
     grouped: dict[str, CategoryTotal] = {}
     for t in txns:
+        if t.kind not in ("income", "expense"):
+            continue
         key = f"{t.kind}:{t.category_id or 0}"
         if key not in grouped:
             grouped[key] = CategoryTotal(
@@ -89,19 +91,28 @@ def accounts_summary(
 
     by_acc: dict[int, dict[str, float]] = {}
     for t in txns:
-        d = by_acc.setdefault(t.account_id, {"income": 0.0, "expense": 0.0})
-        d[t.kind] += float(t.amount)
+        if t.kind == "transfer":
+            d = by_acc.setdefault(t.account_id, {"income": 0.0, "expense": 0.0, "out": 0.0, "in": 0.0})
+            d["out"] += float(t.amount)
+            if t.to_account_id is not None:
+                e = by_acc.setdefault(t.to_account_id, {"income": 0.0, "expense": 0.0, "out": 0.0, "in": 0.0})
+                e["in"] += float(t.amount)
+        else:
+            d = by_acc.setdefault(t.account_id, {"income": 0.0, "expense": 0.0, "out": 0.0, "in": 0.0})
+            d[t.kind] += float(t.amount)
 
     rows = []
     for a in accounts:
-        d = by_acc.get(a.id, {"income": 0.0, "expense": 0.0})
-        balance = float(a.opening_balance) + d["income"] - d["expense"]
+        d = by_acc.get(a.id, {"income": 0.0, "expense": 0.0, "out": 0.0, "in": 0.0})
+        balance = float(a.opening_balance) + d["income"] - d["expense"] - d["out"] + d["in"]
         rows.append(
             AccountBalance(
                 account=AccountOut.model_validate(a),
                 opening_balance=float(a.opening_balance),
                 total_income=d["income"],
                 total_expense=d["expense"],
+                total_transfer_out=d["out"],
+                total_transfer_in=d["in"],
                 balance=balance,
             )
         )

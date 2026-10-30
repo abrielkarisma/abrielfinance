@@ -38,7 +38,11 @@ class Account(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="accounts")
-    transactions = relationship("Transaction", back_populates="account")
+    transactions = relationship(
+        "Transaction",
+        back_populates="account",
+        foreign_keys="Transaction.account_id",
+    )
 
 
 class Category(Base):
@@ -62,6 +66,9 @@ class Transaction(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)
+    to_account_id: Mapped[int | None] = mapped_column(
+        ForeignKey("accounts.id"), nullable=True
+    )
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
@@ -72,5 +79,6 @@ class Transaction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="transactions")
-    account = relationship("Account", back_populates="transactions")
+    account = relationship("Account", foreign_keys=[account_id], back_populates="transactions")
+    to_account = relationship("Account", foreign_keys=[to_account_id])
     category = relationship("Category", back_populates="transactions")
