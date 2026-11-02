@@ -14,9 +14,15 @@ const cssVar = (n, fb) => (getComputedStyle(document.documentElement).getPropert
 const INCOME_COLOR = '#2f7a45'
 const EXPENSE_COLOR = '#1b1d1f'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-const WINDOW = 6
-const STEP = 3
-const MAX_BACK = 60
+const pad = (n) => String(n).padStart(2, '0')
+const dstr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
+const TIMELINES = [
+  { id: 'daily', label: 'Harian' },
+  { id: 'weekly', label: 'Mingguan' },
+  { id: 'monthly', label: 'Bulanan' },
+  { id: 'yearly', label: 'Tahunan' }
+]
 
 function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -42,9 +48,48 @@ function niceTicks(min, max, n = 5) {
   return Array.from({ length: n }, (_, i) => Math.round(min + i * step))
 }
 
-function shortLabel(label) {
-  const i = label.indexOf('–')
-  return i >= 0 ? label.slice(0, i).trim() : label
+// Daftar bucket (lama -> baru) sesuai timeline.
+function buildBuckets(tl, selPeriod) {
+  const now = new Date()
+  const buckets = []
+  if (tl === 'daily' && selPeriod) {
+    const s = new Date(selPeriod.start + 'T00:00:00')
+    const e = new Date(selPeriod.end + 'T00:00:00')
+    for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+      const nxt = new Date(d)
+      nxt.setDate(nxt.getDate() + 1)
+      buckets.push({ label: `${d.getDate()} ${MONTHS[d.getMonth()]}`, start: dstr(d), end: dstr(nxt) })
+    }
+  } else if (tl === 'weekly') {
+    const dow = (now.getDay() + 6) % 7 // 0 = Senin
+    const mon = new Date(now)
+    mon.setDate(now.getDate() - dow)
+    const start = new Date(mon)
+    start.setDate(mon.getDate() - 15 * 7)
+    for (let i = 0; i < 16; i++) {
+      const w = new Date(start)
+      w.setDate(start.getDate() + i * 7)
+      const we = new Date(w)
+      we.setDate(w.getDate() + 7)
+      buckets.push({ label: `${w.getDate()} ${MONTHS[w.getMonth()]}`, start: dstr(w), end: dstr(we) })
+    }
+  } else if (tl === 'monthly') {
+    const yr = now.getFullYear()
+    for (let m = 0; m < 12; m++) {
+      const s = new Date(yr, m, 1)
+      const e = new Date(yr, m + 1, 1)
+      buckets.push({ label: MONTHS[m], start: dstr(s), end: dstr(e) })
+    }
+  } else {
+    const startYr = now.getFullYear() - 4
+    const curYr = now.getFullYear()
+    for (let y = startYr; y <= curYr; y++) {
+      const s = new Date(y, 0, 1)
+      const e = new Date(y + 1, 0, 1)
+      buckets.push({ label: String(y), start: dstr(s), end: dstr(e) })
+    }
+  }
+  return buckets
 }
 
 export default function Grafik() {
@@ -59,92 +104,64 @@ export default function Grafik() {
     return () => window.removeEventListener('fundy-theme', h)
   }, [])
 
-  const [trendBack, setTrendBack] = useState(0)
+  const [tl, setTl] = useState('daily')
   const [selBack, setSelBack] = useState(0)
-  const trendPeriods = usePeriods(trendBack + WINDOW, profile?.salary_day, profile?.salary_end_of_month)
   const selPeriods = usePeriods(selBack + 1, profile?.salary_day, profile?.salary_end_of_month)
   const selPeriod = selPeriods[selBack] || null
 
-  const [trend, setTrend] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [series, setSeries] = useState([])
+  const [loading, setLoading] = useState(false)
   const [showIncome, setShowIncome] = useState(true)
   const [showExpense, setShowExpense] = useState(true)
-  const [dShowIncome, setDShowIncome] = useState(true)
-  const [dShowExpense, setDShowExpense] = useState(true)
   const [cats, setCats] = useState([])
   const [balancePie, setBalancePie] = useState([])
-  const [daily, setDaily] = useState([])
+  const [selSum, setSelSum] = useState(null)
+
+  // data periode terpilih: summary (untuk kartu & kategori) + distribusi saldo
+  useEffect(() => {
+    if (!selPeriod) return
+    let alive = true
+    api.get('/reports/summary', { params: { start: selPeriod.start, end: selPeriod.end } })
+      .then((r) => { if (alive) { setSelSum(r.data); setCats(r.data.by_category || []) } })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [selPeriod?.start, selPeriod?.end])
 
   useEffect(() => {
-    if (trendPeriods.length < WINDOW) return
+    if (!selPeriod) return
     let alive = true
-    const rows = trendPeriods.slice(trendBack, trendBack + WINDOW)
+    api.get('/reports/accounts', { params: { end: selPeriod.end } })
+      .then((r) => { if (alive) setBalancePie(r.data.accounts || []) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [selPeriod?.end])
+
+  // data chart utama sesuai timeline
+  useEffect(() => {
+    const buckets = buildBuckets(tl, selPeriod)
+    if (!buckets.length) return
+    let alive = true
     setLoading(true)
-    Promise.all(rows.map(async (p) => {
-      const r = await api.get('/reports/summary', { params: { start: p.start, end: p.end } })
-      return { name: p.label, income: r.data.total_income || 0, expense: r.data.total_expense || 0, key: p.start }
+    Promise.all(buckets.map(async (b) => {
+      const r = await api.get('/reports/summary', { params: { start: b.start, end: b.end } })
+      return { ...b, income: r.data.total_income || 0, expense: r.data.total_expense || 0 }
     }))
-      .then((data) => { if (alive) setTrend(data) })
+      .then((data) => { if (alive) setSeries(data) })
       .catch(() => {})
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trendBack, trendPeriods])
-
-  useEffect(() => {
-    if (!selPeriod) return
-    api.get('/reports/summary', { params: { start: selPeriod.start, end: selPeriod.end } })
-      .then((r) => setCats(r.data.by_category || [])).catch(() => {})
-  }, [selPeriod?.start, selPeriod?.end])
-
-  useEffect(() => {
-    if (!selPeriod) return
-    api.get('/reports/accounts', { params: { end: selPeriod.end } })
-      .then((r) => setBalancePie(r.data.accounts || [])).catch(() => {})
-  }, [selPeriod?.end])
-
-  useEffect(() => {
-    if (!selPeriod) return
-    const s = new Date(selPeriod.start + 'T00:00:00')
-    const e = new Date(selPeriod.end + 'T00:00:00')
-    const lastDay = new Date(e)
-    lastDay.setDate(lastDay.getDate() - 1)
-    const lastStr = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
-    api.get('/transactions', { params: { start: selPeriod.start, end: lastStr, limit: 2000 } })
-      .then((r) => {
-        const byDay = new Map()
-        for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-          byDay.set(key, { name: `${d.getDate()} ${MONTHS[d.getMonth()]}`, income: 0, expense: 0 })
-        }
-        ;(r.data.items || []).forEach((t) => {
-          if (t.kind !== 'income' && t.kind !== 'expense') return
-          const cell = byDay.get(t.date)
-          if (cell) cell[t.kind] += t.amount
-        })
-        setDaily([...byDay.values()])
-      })
-      .catch(() => {})
-  }, [selPeriod?.start, selPeriod?.end])
+  }, [tl, selPeriod?.start, selPeriod?.end])
 
   const expenseByCat = cats.filter((c) => c.category?.kind === 'expense')
   const balData = balancePie.map((a) => ({ name: a.account.name, value: a.balance, color: a.account.color }))
-  const totalIncome = trend.reduce((s, t) => s + t.income, 0)
-  const totalExpense = trend.reduce((s, t) => s + t.expense, 0)
 
   const tVals = []
-  if (showIncome) tVals.push(...trend.map((t) => t.income))
-  if (showExpense) tVals.push(...trend.map((t) => t.expense))
+  if (showIncome) tVals.push(...series.map((t) => t.income))
+  if (showExpense) tVals.push(...series.map((t) => t.expense))
   const tMin = tVals.length ? Math.min(...tVals) : 0
   const tMax = tVals.length ? Math.max(...tVals) : 1
   const tDomain = tMax === tMin ? [0, tMax + 1] : [tMin, tMax]
-
-  const dVals = []
-  if (dShowIncome) dVals.push(...daily.map((d) => d.income))
-  if (dShowExpense) dVals.push(...daily.map((d) => d.expense))
-  const dMin = dVals.length ? Math.min(...dVals) : 0
-  const dMax = dVals.length ? Math.max(...dVals) : 1
-  const dDomain = dMax === dMin ? [0, dMax + 1] : [dMin, dMax]
 
   const fmtAxis = (v) => {
     if (v >= 1e6) return v % 1e6 === 0 ? `${v / 1e6} juta` : `${(v / 1e6).toFixed(1).replace('.', ',')} juta`
@@ -152,9 +169,12 @@ export default function Grafik() {
     return String(v)
   }
 
-  const rangeText = trendPeriods.length >= WINDOW
-    ? `${shortLabel(trendPeriods[trendBack + WINDOW - 1].label)} – ${shortLabel(trendPeriods[trendBack].label)}`
-    : ''
+  const tlTitle = {
+    daily: `Arus kas harian · ${selPeriod?.label ?? ''}`,
+    weekly: 'Rekap mingguan · 16 minggu terakhir',
+    monthly: `Rekap bulanan · ${new Date().getFullYear()}`,
+    yearly: 'Rekap tahunan · 5 tahun terakhir'
+  }[tl]
 
   const chip = (on, setOn, colorOn, label) => (
     <button
@@ -172,63 +192,51 @@ export default function Grafik() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold md:text-2xl">Grafik</h1>
-          <p className="text-sm text-slate-400">Tren keuanganmu · {selPeriod?.label ?? '…'}</p>
+          <p className="text-sm text-slate-400">Tren keuanganmu · {tlTitle}</p>
         </div>
-        <PeriodNav
-          period={selPeriod}
-          back={selBack}
-          onOlder={() => setSelBack((b) => Math.min(b + 1, MAX_BACK))}
-          onNewer={() => setSelBack((b) => Math.max(b - 1, 0))}
-        />
+        <div className="flex rounded-[10px] border border-slate-300 p-0.5">
+          {TIMELINES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTl(t.id)}
+              className={`rounded-[8px] px-3 py-1 text-xs font-semibold transition-colors ${
+                tl === t.id ? 'bg-[#1b1d1f] text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="animate-rise">
-          <p className="text-sm text-slate-500">Pemasukan ({WINDOW} periode terakhir)</p>
-          <p className="mt-1 text-2xl font-bold text-up tnum">{hide ? 'Rp •••' : fmtIDR(totalIncome)}</p>
+          <p className="text-sm text-slate-500">Pemasukan · {selPeriod?.label ?? 'periode ini'}</p>
+          <p className="mt-1 text-2xl font-bold text-up tnum">{hide ? 'Rp •••' : fmtIDR(selSum?.total_income)}</p>
         </Card>
         <Card className="animate-rise" style={{ animationDelay: '60ms' }}>
-          <p className="text-sm text-slate-500">Pengeluaran ({WINDOW} periode terakhir)</p>
-          <p className="mt-1 text-2xl font-bold text-ink tnum">{hide ? 'Rp •••' : fmtIDR(totalExpense)}</p>
+          <p className="text-sm text-slate-500">Pengeluaran · {selPeriod?.label ?? 'periode ini'}</p>
+          <p className="mt-1 text-2xl font-bold text-ink tnum">{hide ? 'Rp •••' : fmtIDR(selSum?.total_expense)}</p>
         </Card>
       </div>
 
-      <Card className="animate-rise" style={{ animationDelay: '120ms' }}>
+      <Card className="animate-rise">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-700">Pemasukan vs Pengeluaran</h2>
-            <div className="flex items-center gap-1.5">
-              {chip(showIncome, setShowIncome, 'border-up bg-up-soft text-up', 'Pemasukan')}
-              {chip(showExpense, setShowExpense, 'border-ink bg-neutral-soft text-ink', 'Pengeluaran')}
-            </div>
-          </div>
+          <h2 className="text-sm font-semibold text-slate-700">{tlTitle}</h2>
           <div className="flex items-center gap-1.5">
-            <button
-              disabled={trendBack >= MAX_BACK}
-              onClick={() => setTrendBack((b) => Math.min(b + STEP, MAX_BACK))}
-              className="rounded-[10px] border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-            >
-              ◀ Lebih lama
-            </button>
-            <span className="px-1 text-xs font-semibold text-slate-500">{rangeText}</span>
-            <button
-              disabled={trendBack === 0}
-              onClick={() => setTrendBack((b) => Math.max(b - STEP, 0))}
-              className="rounded-[10px] border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-            >
-              Terbaru ▶
-            </button>
+            {chip(showIncome, setShowIncome, 'border-up bg-up-soft text-up', 'Pemasukan')}
+            {chip(showExpense, setShowExpense, 'border-ink bg-neutral-soft text-ink', 'Pengeluaran')}
           </div>
         </div>
-        <p className="mb-3 text-xs text-slate-400">Geser untuk melihat periode-periode sebelumnya. Klik chip untuk tampil/sembunyikan garis.</p>
-        <div className="h-64">
-          {loading && trend.length === 0 ? (
+        <p className="mb-3 text-xs text-slate-400">Total pemasukan & pengeluaran per {tl === 'daily' ? 'hari ' : tl === 'weekly' ? 'minggu ' : tl === 'monthly' ? 'bulan ' : 'tahun '}dalam rentang timeline. Klik chip untuk tampil/sembunyikan garis.</p>
+        <div className="h-72">
+          {loading && series.length === 0 ? (
             <p className="py-20 text-center text-sm text-slate-400">Memuat…</p>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
+              <LineChart data={series} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" tickFormatter={shortLabel} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickMargin={8} height={32} />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickMargin={8} interval="preserveStartEnd" height={30} />
                 <YAxis domain={tDomain} ticks={niceTicks(tMin, tMax)} width={52} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtAxis} />
                 <Tooltip content={<ChartTip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -241,42 +249,6 @@ export default function Grafik() {
               </LineChart>
             </ResponsiveContainer>
           )}
-        </div>
-      </Card>
-
-      <Card className="animate-rise" style={{ animationDelay: '150ms' }}>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-700">Arus Kas Harian</h2>
-            <p className="text-xs text-slate-400">Pemasukan & pengeluaran per hari · {selPeriod?.label ?? ''}</p>
-          </div>
-          <PeriodNav
-            period={selPeriod}
-            back={selBack}
-            onOlder={() => setSelBack((b) => Math.min(b + 1, MAX_BACK))}
-            onNewer={() => setSelBack((b) => Math.max(b - 1, 0))}
-          />
-        </div>
-        <div className="mb-3 flex flex-wrap items-center gap-1.5">
-          {chip(dShowIncome, setDShowIncome, 'border-up bg-up-soft text-up', 'Pemasukan')}
-          {chip(dShowExpense, setDShowExpense, 'border-ink bg-neutral-soft text-ink', 'Pengeluaran')}
-        </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={daily} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" tickMargin={8} height={28} />
-              <YAxis domain={dDomain} ticks={niceTicks(dMin, dMax)} width={52} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtAxis} />
-              <Tooltip content={<ChartTip />} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {dShowIncome && (
-                <Line type="monotone" dataKey="income" name="Pemasukan" stroke={incCol} strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 4 }} />
-              )}
-              {dShowExpense && (
-                <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke={expCol} strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 4 }} />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
         </div>
       </Card>
 
