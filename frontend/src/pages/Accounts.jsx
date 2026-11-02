@@ -138,7 +138,7 @@ export default function Accounts() {
   }
 
   const copyNum = async (n) => {
-    const text = `${n.name}, ${n.holder}, ${n.number}`
+    const text = [n.name, n.holder, n.number].join('\n')
     try {
       await navigator.clipboard.writeText(text)
       toast.success('No rekening disalin')
