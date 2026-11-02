@@ -194,19 +194,7 @@ export default function Grafik() {
           <h1 className="text-xl font-bold md:text-2xl">Grafik</h1>
           <p className="text-sm text-slate-400">Tren keuanganmu · {tlTitle}</p>
         </div>
-        <div className="flex rounded-[10px] border border-slate-300 p-0.5">
-          {TIMELINES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTl(t.id)}
-              className={`rounded-[8px] px-3 py-1 text-xs font-semibold transition-colors ${
-                tl === t.id ? 'bg-[#1b1d1f] text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -229,6 +217,21 @@ export default function Grafik() {
           </div>
         </div>
         <p className="mb-3 text-xs text-slate-400">Total pemasukan & pengeluaran per {tl === 'daily' ? 'hari ' : tl === 'weekly' ? 'minggu ' : tl === 'monthly' ? 'bulan ' : 'tahun '}dalam rentang timeline. Klik chip untuk tampil/sembunyikan garis.</p>
+        <div className="mb-4 flex justify-center">
+          <div className="flex rounded-[10px] border border-slate-300 p-0.5">
+            {TIMELINES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTl(t.id)}
+                className={`rounded-[8px] px-3 py-1 text-xs font-semibold transition-colors ${
+                  tl === t.id ? 'bg-[#1b1d1f] text-white' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="h-72">
           {loading && series.length === 0 ? (
             <p className="py-20 text-center text-sm text-slate-400">Memuat…</p>
