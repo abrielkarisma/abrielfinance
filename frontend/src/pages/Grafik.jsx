@@ -14,6 +14,7 @@ const cssVar = (n, fb) => (getComputedStyle(document.documentElement).getPropert
 const INCOME_COLOR = '#2f7a45'
 const EXPENSE_COLOR = '#1b1d1f'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 const pad = (n) => String(n).padStart(2, '0')
 const dstr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
@@ -49,12 +50,12 @@ function niceTicks(min, max, n = 5) {
 }
 
 // Daftar bucket (lama -> baru) sesuai timeline.
-function buildBuckets(tl, selPeriod) {
+function buildBuckets(tl, selPeriod, dMonth, dYear) {
   const now = new Date()
   const buckets = []
-  if (tl === 'daily' && selPeriod) {
-    const s = new Date(selPeriod.start + 'T00:00:00')
-    const e = new Date(selPeriod.end + 'T00:00:00')
+  if (tl === 'daily') {
+    const s = new Date(dYear, dMonth, 1)
+    const e = new Date(dYear, dMonth + 1, 1)
     for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
       const nxt = new Date(d)
       nxt.setDate(nxt.getDate() + 1)
@@ -105,6 +106,8 @@ export default function Grafik() {
   }, [])
 
   const [tl, setTl] = useState('daily')
+  const [dMonth, setDMonth] = useState(() => new Date().getMonth())
+  const [dYear, setDYear] = useState(() => new Date().getFullYear())
   const [selBack, setSelBack] = useState(0)
   const selPeriods = usePeriods(selBack + 1, profile?.salary_day, profile?.salary_end_of_month)
   const selPeriod = selPeriods[selBack] || null
@@ -138,7 +141,7 @@ export default function Grafik() {
 
   // data chart utama sesuai timeline
   useEffect(() => {
-    const buckets = buildBuckets(tl, selPeriod)
+    const buckets = buildBuckets(tl, selPeriod, dMonth, dYear)
     if (!buckets.length) return
     let alive = true
     setLoading(true)
@@ -151,7 +154,7 @@ export default function Grafik() {
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tl, selPeriod?.start, selPeriod?.end])
+  }, [tl, selPeriod?.start, selPeriod?.end, dMonth, dYear])
 
   const expenseByCat = cats.filter((c) => c.category?.kind === 'expense')
   const balData = balancePie.map((a) => ({ name: a.account.name, value: a.balance, color: a.account.color }))
@@ -170,7 +173,7 @@ export default function Grafik() {
   }
 
   const tlTitle = {
-    daily: `Arus kas harian · ${selPeriod?.label ?? ''}`,
+    daily: `Arus kas harian · ${MONTHS_FULL[dMonth]} ${dYear}`,
     weekly: 'Rekap mingguan · 16 minggu terakhir',
     monthly: `Rekap bulanan · ${new Date().getFullYear()}`,
     yearly: 'Rekap tahunan · 5 tahun terakhir'
@@ -232,6 +235,24 @@ export default function Grafik() {
             ))}
           </div>
         </div>
+        {tl === 'daily' && (
+          <div className="mb-4 flex items-center justify-center gap-2">
+            <select
+              value={dMonth}
+              onChange={(e) => setDMonth(Number(e.target.value))}
+              className="h-9 rounded-[10px] border border-[#e6e6e6] bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+            >
+              {MONTHS_FULL.map((m, i) => <option key={m} value={i}>{m}</option>)}
+            </select>
+            <select
+              value={dYear}
+              onChange={(e) => setDYear(Number(e.target.value))}
+              className="h-9 rounded-[10px] border border-[#e6e6e6] bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+            >
+              {Array.from({ length: 6 }, (_, k) => new Date().getFullYear() - 5 + k).map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        )}
         <div className="h-72">
           {loading && series.length === 0 ? (
             <p className="py-20 text-center text-sm text-slate-400">Memuat…</p>
