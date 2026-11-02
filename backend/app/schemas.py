@@ -265,3 +265,25 @@ class ReminderOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AccountNumberCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    holder: str = Field(min_length=1, max_length=120)
+    number: str = Field(min_length=1, max_length=60)
+
+
+class AccountNumberUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    holder: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    number: Optional[str] = Field(default=None, min_length=1, max_length=60)
+
+
+class AccountNumberOut(BaseModel):
+    id: int
+    name: str
+    holder: str
+    number: str
+
+    class Config:
+        from_attributes = True

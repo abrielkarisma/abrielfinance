@@ -8,7 +8,16 @@ from sqlalchemy import inspect, text
 
 from . import models
 from .db import Base, engine
-from .routers import accounts, admin, auth, categories, reminders, reports, transactions
+from .routers import (
+    account_numbers,
+    accounts,
+    admin,
+    auth,
+    categories,
+    reminders,
+    reports,
+    transactions,
+)
 
 DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -61,6 +70,7 @@ app.include_router(categories.router)
 app.include_router(transactions.router)
 app.include_router(reports.router)
 app.include_router(reminders.router)
+app.include_router(account_numbers.router)
 
 
 if DIST.is_dir():

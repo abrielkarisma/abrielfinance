@@ -24,6 +24,58 @@ def _check_account(db: Session, user: User, account_id: int) -> None:
         raise HTTPException(status_code=400, detail="Akun tidak valid")
 
 
+def _account_balance(
+    db: Session, user: User, account_id: int, exclude_tx_id: int | None = None
+) -> float:
+    """Saldo akun (sepanjang waktu), kecuali satu transaksi tertentu."""
+    acc = db.get(Account, account_id)
+    if not acc or acc.user_id != user.id:
+        return 0.0
+    base = float(acc.opening_balance)
+
+    # keluar: expense + transfer asal
+    q = db.query(Transaction).filter(
+        Transaction.user_id == user.id, Transaction.account_id == account_id
+    )
+    if exclude_tx_id is not None:
+        q = q.filter(Transaction.id != exclude_tx_id)
+    for t in q.all():
+        if t.kind == "income":
+            base += float(t.amount)
+        else:  # expense / transfer (keluar dari akun ini)
+            base -= float(t.amount)
+
+    # masuk: transfer tujuan
+    q2 = db.query(Transaction).filter(
+        Transaction.user_id == user.id,
+        Transaction.to_account_id == account_id,
+        Transaction.kind == "transfer",
+    )
+    if exclude_tx_id is not None:
+        q2 = q2.filter(Transaction.id != exclude_tx_id)
+    for t in q2.all():
+        base += float(t.amount)
+
+    return base
+
+
+def _fmt_rupiah(n: float) -> str:
+    return "Rp " + f"{int(n):,}".replace(",", ".")
+
+
+def _ensure_balance(
+    db: Session, user: User, account_id: int, amount: float, exclude_tx_id: int | None = None
+) -> None:
+    bal = _account_balance(db, user, account_id, exclude_tx_id)
+    if bal < amount:
+        acc = db.get(Account, account_id)
+        name = acc.name if acc else "Akun"
+        raise HTTPException(
+            status_code=400,
+            detail=f"{name}: saldo tidak cukup (sisa {_fmt_rupiah(max(bal, 0))})",
+        )
+
+
 @router.get("")
 def list_transactions(
     start: date | None = None,
@@ -69,6 +121,10 @@ def create_transaction(
         cat = db.get(Category, payload.category_id)
         if not cat or cat.user_id != user.id or cat.kind != payload.kind:
             raise HTTPException(status_code=400, detail="Kategori tidak valid")
+
+    if payload.kind in ("expense", "transfer"):
+        _ensure_balance(db, user, payload.account_id, payload.amount)
+
     tx = Transaction(user_id=user.id, **payload.model_dump())
     db.add(tx)
     db.commit()
@@ -100,6 +156,12 @@ def update_transaction(
         cat = db.get(Category, data["category_id"])
         if not cat or cat.user_id != user.id or cat.kind != kind:
             raise HTTPException(status_code=400, detail="Kategori tidak valid")
+
+    if kind in ("expense", "transfer"):
+        src = data.get("account_id", tx.account_id)
+        amt = data.get("amount", tx.amount)
+        _ensure_balance(db, user, src, amt, exclude_tx_id=tx.id)
+
     for k, v in data.items():
         setattr(tx, k, v)
     db.commit()

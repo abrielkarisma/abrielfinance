@@ -30,6 +30,9 @@ class User(Base):
     reminders = relationship(
         "Reminder", back_populates="user", cascade="all, delete-orphan"
     )
+    account_numbers = relationship(
+        "AccountNumber", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Account(Base):
@@ -106,3 +109,16 @@ class Reminder(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="reminders")
+
+
+class AccountNumber(Base):
+    __tablename__ = "account_numbers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    holder: Mapped[str] = mapped_column(String(120))
+    number: Mapped[str] = mapped_column(String(60))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="account_numbers")
