@@ -272,7 +272,7 @@ export default function Layout() {
       <button
         onClick={() => setAddOpen(true)}
         aria-label="Tambah transaksi"
-        className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1b1d1f] text-white shadow-[0_8px_24px_rgba(16,24,40,0.35)] transition-transform hover:bg-[#33373a] active:scale-95 lg:bottom-8 lg:right-8"
+        className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#1b1d1f] ring-1 ring-black/10 shadow-[0_10px_28px_rgba(16,24,40,0.4)] transition-transform hover:bg-neutral-100 active:scale-95 lg:bottom-8 lg:right-8"
       >
         {I.plus}
       </button>

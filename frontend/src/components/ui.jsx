@@ -1,3 +1,5 @@
+import { X } from 'lucide-react'
+
 export function cn(...parts) {
   return parts.filter(Boolean).join(' ')
 }
@@ -23,7 +25,7 @@ function shade(hex, amt) {
 
 export function Button({ variant = 'primary', className = '', loading = false, disabled = false, children, ...props }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none active:translate-y-px h-10'
+    'inline-flex items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none active:translate-y-px h-11'
   const variants = {
     primary: 'btn-primary',
     ghost: 'bg-transparent text-ink hover:bg-slate-100',
@@ -42,18 +44,24 @@ export function Card({ className = '', children }) {
   return <div className={cn('rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(16,24,40,0.05)]', className)}>{children}</div>
 }
 
-export function Input({ className = '', label, error, ...props }) {
+export function Input({ className = '', label, error, prefix, ...props }) {
+  const box = cn(
+    'w-full rounded-[10px] border border-[#e6e6e6] bg-white text-sm outline-none transition-shadow h-11 focus:border-accent focus:ring-2 focus:ring-accent/15',
+    prefix ? 'pl-10' : 'px-3.5',
+    error && 'border-down',
+    className
+  )
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-sm font-medium text-sub">{label}</span>}
-      <input
-        className={cn(
-          'w-full rounded-[10px] border border-[#e8e8e8] bg-white px-3 text-sm outline-none h-10 focus:border-accent focus:ring-2 focus:ring-accent/15',
-          error && 'border-down',
-          className
+      {label && <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>}
+      <div className="relative">
+        {prefix && (
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-sm font-semibold text-slate-400">
+            {prefix}
+          </span>
         )}
-        {...props}
-      />
+        <input className={box} {...props} />
+      </div>
       {error && <span className="mt-1 block text-xs font-medium text-down">{error}</span>}
     </label>
   )
@@ -62,10 +70,10 @@ export function Input({ className = '', label, error, ...props }) {
 export function Select({ className = '', label, children, ...props }) {
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-sm font-medium text-sub">{label}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>}
       <select
         className={cn(
-          'w-full rounded-[10px] border border-[#e8e8e8] bg-white px-3 text-sm outline-none h-10 focus:border-accent focus:ring-2 focus:ring-accent/15',
+          'w-full rounded-[10px] border border-[#e6e6e6] bg-white px-3.5 text-sm outline-none h-11 focus:border-accent focus:ring-2 focus:ring-accent/15',
           className
         )}
         {...props}
@@ -91,7 +99,7 @@ export function Badge({ color = '#1D5FBF', children }) {
 export function ColorPicker({ value, onChange }) {
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-medium text-sub">Warna</span>
+      <span className="mb-1.5 block text-sm font-medium text-slate-600">Warna</span>
       <div className="flex flex-wrap items-center gap-2">
         {PALETTE.map((c) => (
           <button
@@ -123,19 +131,33 @@ export function ColorPicker({ value, onChange }) {
   )
 }
 
-export function Modal({ open, onClose, title, children }) {
+export function Modal({ open, onClose, title, subtitle, icon, children }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-[20px] bg-white max-h-[90vh] overflow-y-auto fade-in">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h3 className="text-lg font-semibold text-ink">{title}</h3>
-          <button className="text-slate-400 hover:text-ink text-xl leading-none" onClick={onClose} aria-label="Tutup">
-            ✕
+      <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_64px_rgba(16,24,40,0.22)] max-h-[90vh] overflow-y-auto fade-in">
+        <div className="flex items-start justify-between gap-3 px-6 pb-4 pt-5">
+          <div className="flex items-start gap-3">
+            {icon && (
+              <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                {icon}
+              </div>
+            )}
+            <div>
+              <h3 className="text-lg font-bold text-ink leading-tight">{title}</h3>
+              {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+            </div>
+          </div>
+          <button
+            className="-mr-2 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-ink"
+            onClick={onClose}
+            aria-label="Tutup"
+          >
+            <X size={18} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="px-6 pb-6">{children}</div>
       </div>
     </div>
   )

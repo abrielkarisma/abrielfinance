@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg } from '../lib/api.js'
 import { Button, Card, ColorPicker, Input, Modal } from '../components/ui.jsx'
+import { Check, Tags, Trash2 } from 'lucide-react'
 import { toast } from '../components/toast.jsx'
 
 const COLORS = ['#f97316', '#3b82f6', '#ec4899', '#a855f7', '#ef4444', '#14b8a6', '#f59e0b', '#22c55e', '#84cc16', '#64748b']
@@ -109,19 +110,25 @@ export default function Categories() {
         {renderGroup('income')}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Kategori' : 'Tambah Kategori'}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? 'Edit Kategori' : 'Tambah Kategori'}
+        subtitle={editing ? 'Perbarui nama & warna kategori.' : 'Kelompokkan dan warnai transaksi.'}
+        icon={<Tags size={22} strokeWidth={2} />}
+      >
         <form onSubmit={submit} className="space-y-4">
           <Input label="Nama Kategori" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <ColorPicker value={form.color} onChange={(c) => setForm({ ...form, color: c })} />
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
-            <Button type="submit" loading={saving}>Simpan</Button>
+            <Button type="submit" loading={saving}><Check size={16} /> Simpan</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Hapus Kategori">
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Hapus Kategori" subtitle="Tindakan ini tidak bisa dibatalkan." icon={<Trash2 size={22} strokeWidth={2} />}>
         <p className="text-sm text-slate-600">
           Yakin mau menghapus kategori <b>{deleting?.name}</b>? Transaksi yang memakainya akan jadi "Tanpa kategori".
         </p>

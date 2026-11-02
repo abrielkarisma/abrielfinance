@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg } from '../lib/api.js'
 import { Button, Card, Input, Modal } from '../components/ui.jsx'
+import { Bell, CalendarDays, Check, Repeat } from 'lucide-react'
 import { toast } from '../components/toast.jsx'
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
@@ -219,7 +220,13 @@ export default function Reminders() {
         )}
       </Card>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Pengingat' : 'Tambah Pengingat'}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? 'Edit Pengingat' : 'Tambah Pengingat'}
+        subtitle={editing ? 'Perbarui jadwal pengingat.' : 'Jadwalkan pengingat rutin.'}
+        icon={<Bell size={22} strokeWidth={2} />}
+      >
         <form onSubmit={submit} className="space-y-4">
           <Input
             label="Judul"
@@ -240,16 +247,16 @@ export default function Reminders() {
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, kind: 'weekly' }))}
-                className={`rounded-xl border px-3 py-2 text-xs font-medium ${form.kind === 'weekly' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${form.kind === 'weekly' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50'}`}
               >
-                Ulangi setiap minggu
+                <Repeat size={15} /> Ulangi setiap minggu
               </button>
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, kind: 'date' }))}
-                className={`rounded-xl border px-3 py-2 text-xs font-medium ${form.kind === 'date' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${form.kind === 'date' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50'}`}
               >
-                Tanggal tertentu
+                <CalendarDays size={15} /> Tanggal tertentu
               </button>
             </div>
             {form.kind === 'weekly' ? (
@@ -312,7 +319,7 @@ export default function Reminders() {
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
-            <Button type="submit" loading={saving}>Simpan</Button>
+            <Button type="submit" loading={saving}><Check size={16} /> Simpan</Button>
           </div>
         </form>
       </Modal>

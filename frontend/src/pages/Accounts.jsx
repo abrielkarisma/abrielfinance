@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg, fmtIDR, fmtMoney, parseMoney } from '../lib/api.js'
 import { Button, Card, ColorPicker, Input, Modal, Select } from '../components/ui.jsx'
+import { Check, Landmark, Trash2 } from 'lucide-react'
 import { useHideBal } from '../context/BalContext.jsx'
 import { toast } from '../components/toast.jsx'
 
@@ -119,7 +120,13 @@ export default function Accounts() {
         </ul>
       </Card>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Akun' : 'Tambah Akun'}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? 'Edit Akun' : 'Tambah Akun'}
+        subtitle={editing ? 'Perbarui detail rekening.' : 'Rekening bank, e-wallet, atau tunai.'}
+        icon={<Landmark size={22} strokeWidth={2} />}
+      >
         <form onSubmit={submit} className="space-y-4">
           <Input label="Nama Akun" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="cth: BCA, Mandiri, OVO" />
           <Select label="Jenis" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
@@ -128,16 +135,16 @@ export default function Accounts() {
             <option value="cash">Tunai</option>
           </Select>
           <ColorPicker value={form.color} onChange={(c) => setForm({ ...form, color: c })} />
-          <Input label="Saldo Awal (Rp)" type="text" inputMode="numeric" pattern="[0-9.]*" value={form.opening_balance} onChange={(e) => setForm({ ...form, opening_balance: fmtMoney(e.target.value) })} />
+          <Input label="Saldo Awal" prefix="Rp" type="text" inputMode="numeric" pattern="[0-9.]*" value={form.opening_balance} onChange={(e) => setForm({ ...form, opening_balance: fmtMoney(e.target.value) })} />
           {err && <p className="text-sm text-rose-600">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
-            <Button type="submit" loading={saving}>Simpan</Button>
+            <Button type="submit" loading={saving}><Check size={16} /> Simpan</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Hapus Akun">
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Hapus Akun" subtitle="Tindakan ini tidak bisa dibatalkan." icon={<Trash2 size={22} strokeWidth={2} />}>
         <p className="text-sm text-slate-600">
           Yakin mau menghapus akun <b>{deleting?.name}</b>? Akun yang masih punya transaksi tidak bisa dihapus.
         </p>
