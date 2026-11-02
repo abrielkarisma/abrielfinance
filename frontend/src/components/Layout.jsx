@@ -32,7 +32,8 @@ const primaryLinks = [
 ]
 const masterLinks = [
   { to: '/accounts', label: 'Rekening', icon: I.bank },
-  { to: '/categories', label: 'Kategori', icon: I.tag }
+  { to: '/categories', label: 'Kategori', icon: I.tag },
+  { to: '/settings', label: 'Pengaturan', icon: I.gear }
 ]
 
 function NavItem({ link }) {

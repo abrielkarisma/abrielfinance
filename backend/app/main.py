@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import inspect, text
 
 from . import models
 from .db import Base, engine
@@ -12,9 +13,25 @@ from .routers import accounts, admin, auth, categories, reminders, reports, tran
 DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 
+def _ensure_schema():
+    """Migrasi ringan: tambah kolom baru kalau belum ada (SQLite)."""
+    cols = {c["name"] for c in inspect(engine).get_columns("profiles")}
+    with engine.begin() as conn:
+        if "salary_day" not in cols:
+            conn.execute(text("ALTER TABLE profiles ADD COLUMN salary_day INTEGER"))
+        if "salary_end_of_month" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE profiles ADD COLUMN salary_end_of_month "
+                    "BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _ensure_schema()
     yield
 
 

@@ -5,12 +5,14 @@ import api, { fmtIDR } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useHideBal } from '../context/BalContext.jsx'
 import { Badge, Card } from '../components/ui.jsx'
+import PeriodNav from '../components/PeriodNav.jsx'
+import { usePeriods } from '../lib/periods.js'
 import { BarChart, Bar, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const cssVar = (n, fb) => (getComputedStyle(document.documentElement).getPropertyValue(n).trim() || fb)
 const INCOME_COLOR = '#2f7a45'
 const EXPENSE_COLOR = '#1b1d1f'
-const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+const MAX_BACK = 120
 
 function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -53,16 +55,26 @@ export default function Dashboard() {
     window.addEventListener('fundy-theme', h)
     return () => window.removeEventListener('fundy-theme', h)
   }, [])
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [back, setBack] = useState(0)
+  const periods = usePeriods(back + 1, profile?.salary_day, profile?.salary_end_of_month)
+  const period = periods[back] || null
   const [summary, setSummary] = useState(null)
   const [recent, setRecent] = useState([])
   const [accts, setAccts] = useState([])
 
   useEffect(() => {
-    const [y, m] = month.split('-').map(Number)
-    api.get('/reports/summary', { params: { year: y, month: m } }).then((r) => setSummary(r.data)).catch(() => {})
+    if (!period) return
+    let alive = true
+    setSummary(null)
+    api.get('/reports/summary', { params: { start: period.start, end: period.end } })
+      .then((r) => { if (alive) setSummary(r.data) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [period?.start, period?.end])
+
+  useEffect(() => {
     api.get('/transactions', { params: { limit: 6 } }).then((r) => setRecent(r.data.items)).catch(() => {})
-  }, [month])
+  }, [])
 
   useEffect(() => {
     api.get('/reports/accounts').then((r) => setAccts(r.data.accounts)).catch(() => {})
@@ -78,37 +90,35 @@ export default function Dashboard() {
   ]
 
   const firstName = (profile?.name || 'Kawan').trim().split(/\s+/)[0]
-  const [yy, mm] = month.split('-').map(Number)
-  const monthLabel = `${MONTHS[mm - 1]} ${yy}`
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">Halo, {firstName}</h1>
-          <p className="text-sm text-slate-400">Rekap keuangan • {monthLabel}</p>
+          <p className="text-sm text-slate-400">Rekap keuangan • {period?.label ?? '…'}</p>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="h-10 rounded-[10px] border border-slate-300 bg-white px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+          <PeriodNav
+            period={period}
+            back={back}
+            onOlder={() => setBack((b) => Math.min(b + 1, MAX_BACK))}
+            onNewer={() => setBack((b) => Math.max(b - 1, 0))}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="animate-rise">
-          <p className="text-sm text-slate-500">Pemasukan bulan {monthLabel}</p>
+          <p className="text-sm text-slate-500">Pemasukan · periode ini</p>
           <p className="mt-1 text-2xl font-semibold text-up tnum">{fmtM(summary?.total_income)}</p>
         </Card>
         <Card className="animate-rise" style={{ animationDelay: '60ms' }}>
-          <p className="text-sm text-slate-500">Pengeluaran bulan {monthLabel}</p>
+          <p className="text-sm text-slate-500">Pengeluaran · periode ini</p>
           <p className="mt-1 text-2xl font-semibold text-ink tnum">{fmtM(summary?.total_expense)}</p>
         </Card>
         <Card className="animate-rise" style={{ animationDelay: '120ms' }}>
-          <p className="text-sm text-slate-500">Saldo bulan {monthLabel}</p>
+          <p className="text-sm text-slate-500">Saldo · periode ini</p>
           <p className={`mt-1 text-2xl font-semibold tnum ${(summary?.balance ?? 0) >= 0 ? 'text-ink' : 'text-down'}`}>
             {fmtM(summary?.balance)}
           </p>
@@ -165,7 +175,7 @@ export default function Dashboard() {
         <Card className="animate-rise" style={{ animationDelay: '240ms' }}>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Pengeluaran per kategori</h2>
           {expenseByCat.length === 0 ? (
-            <Empty icon={<ReceiptText size={18} />} text="Belum ada data pengeluaran bulan ini." />
+            <Empty icon={<ReceiptText size={18} />} text="Belum ada data pengeluaran periode ini." />
           ) : (
             <>
               <div className="h-56">

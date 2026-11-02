@@ -11,6 +11,7 @@ import Grafik from './pages/Grafik.jsx'
 import Accounts from './pages/Accounts.jsx'
 import Categories from './pages/Categories.jsx'
 import Reminders from './pages/Reminders.jsx'
+import Settings from './pages/Settings.jsx'
 import DataMaster from './pages/DataMaster.jsx'
 
 function Protected({ children }) {
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="accounts" element={<Accounts />} />
             <Route path="categories" element={<Categories />} />
             <Route path="reminders" element={<Reminders />} />
+            <Route path="settings" element={<Settings />} />
             <Route path="data-master" element={<DataMaster />} />
             <Route path="admin" element={<AdminOnly><Admin /></AdminOnly>} />
           </Route>

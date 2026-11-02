@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
-  return <AuthCtx.Provider value={{ profile, login, logout }}>{children}</AuthCtx.Provider>
+  return <AuthCtx.Provider value={{ profile, setProfile, login, logout }}>{children}</AuthCtx.Provider>
 }
 
 export const useAuth = () => useContext(AuthCtx)

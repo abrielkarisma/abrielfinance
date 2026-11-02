@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { Bell, Landmark, Tags } from 'lucide-react'
+import { Bell, Landmark, Settings, Tags } from 'lucide-react'
 import Accounts from './Accounts.jsx'
 import Categories from './Categories.jsx'
 import Reminders from './Reminders.jsx'
+import SettingsPage from './Settings.jsx'
 
 const TABS = [
   { id: 'accounts', label: 'Rekening', icon: <Landmark size={18} strokeWidth={1.8} /> },
   { id: 'categories', label: 'Kategori', icon: <Tags size={18} strokeWidth={1.8} /> },
-  { id: 'reminders', label: 'Pengingat', icon: <Bell size={18} strokeWidth={1.8} /> }
+  { id: 'reminders', label: 'Pengingat', icon: <Bell size={18} strokeWidth={1.8} /> },
+  { id: 'settings', label: 'Pengaturan', icon: <Settings size={18} strokeWidth={1.8} /> }
 ]
 
 export default function DataMaster() {
@@ -38,6 +40,7 @@ export default function DataMaster() {
       {tab === 'accounts' && <Accounts />}
       {tab === 'categories' && <Categories />}
       {tab === 'reminders' && <Reminders />}
+      {tab === 'settings' && <SettingsPage />}
     </div>
   )
 }

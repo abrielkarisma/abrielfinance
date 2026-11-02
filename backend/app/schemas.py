@@ -16,9 +16,26 @@ class ProfileOut(BaseModel):
     name: str
     avatar_color: str = "#64748b"
     is_admin: bool = False
+    salary_day: Optional[int] = None
+    salary_end_of_month: bool = False
 
     class Config:
         from_attributes = True
+
+
+class PreferencesUpdate(BaseModel):
+    salary_day: Optional[int] = Field(default=None, ge=1, le=31)
+    salary_end_of_month: bool = False
+
+
+class PeriodOut(BaseModel):
+    start: date
+    end: date
+    label: str
+
+
+class PeriodListOut(BaseModel):
+    periods: list[PeriodOut]
 
 
 class Token(BaseModel):

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Account, Category, User
 from ..schemas import (
+    PreferencesUpdate,
     ProfileLoginRequest,
     ProfileOut,
     RefreshRequest,
@@ -17,6 +18,7 @@ from ..security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    get_current_user,
     hash_password,
     verify_password,
 )
@@ -80,6 +82,19 @@ def _seed_default_account(db: Session, user: User) -> None:
 @profiles_router.get("/profiles", response_model=list[ProfileOut])
 def list_profiles(db: Session = Depends(get_db)):
     return db.query(User).order_by(User.id).all()
+
+
+@profiles_router.put("/profiles/me/preferences", response_model=ProfileOut)
+def update_preferences(
+    payload: PreferencesUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user.salary_day = None if payload.salary_end_of_month else payload.salary_day
+    user.salary_end_of_month = payload.salary_end_of_month
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 @router.post("/setup", response_model=Token, status_code=201)

@@ -1,10 +1,11 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 
 from ..db import get_db
 from ..models import Account, Transaction, User
+from ..periods import period_containing, periods_list
 from ..schemas import (
     AccountBalance,
     AccountOut,
@@ -12,34 +13,52 @@ from ..schemas import (
     CategoryOut,
     CategoryTotal,
     MonthlySummary,
+    PeriodListOut,
+    PeriodOut,
 )
 from ..security import get_current_user
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
-def _month_range(year: int, month: int) -> tuple[date, date]:
-    start = date(year, month, 1)
-    if month == 12:
-        end = date(year + 1, 1, 1)
-    else:
-        end = date(year, month + 1, 1)
-    return start, end
+def _period_range(
+    user: User, start: date | None = None, end: date | None = None
+) -> tuple[date, date]:
+    if start is not None and end is not None:
+        return start, end
+    s, e = period_containing(date.today(), user.salary_day, user.salary_end_of_month)
+    return start or s, end or e
+
+
+@router.get("/periods", response_model=PeriodListOut)
+def periods(
+    as_of: date | None = None,
+    count: int = Query(6, ge=1, le=120),
+    user: User = Depends(get_current_user),
+):
+    as_of = as_of or date.today()
+    rows = periods_list(as_of, count, user.salary_day, user.salary_end_of_month)
+    return PeriodListOut(
+        periods=[
+            PeriodOut(start=s, end=e, label=_period_label(user, s, e)) for s, e in rows
+        ]
+    )
+
+
+def _period_label(user: User, start: date, end: date) -> str:
+    from ..periods import period_label
+
+    return period_label(start, end, user.salary_day, user.salary_end_of_month)
 
 
 @router.get("/summary", response_model=MonthlySummary)
 def summary(
-    year: int | None = None,
-    month: int | None = None,
+    start: date | None = None,
+    end: date | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    today = date.today()
-    year = year or today.year
-    month = month or today.month
-    if not (1 <= month <= 12):
-        month = today.month
-    start, end = _month_range(year, month)
+    start, end = _period_range(user, start, end)
 
     txns = (
         db.query(Transaction)
@@ -78,21 +97,20 @@ def summary(
 
 @router.get("/accounts", response_model=AccountsSummary)
 def accounts_summary(
-    year: int | None = None,
-    month: int | None = None,
+    end: date | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    _, period_end = _period_range(user, end=end)
     accounts = (
         db.query(Account)
         .filter(Account.user_id == user.id)
         .order_by(Account.created_at)
         .all()
     )
-    txq = db.query(Transaction).filter(Transaction.user_id == user.id)
-    if year and month:
-        _, end = _month_range(year, month)
-        txq = txq.filter(Transaction.date < end)
+    txq = db.query(Transaction).filter(
+        Transaction.user_id == user.id, Transaction.date < period_end
+    )
     txns = txq.all()
 
     by_acc: dict[int, dict[str, float]] = {}
