@@ -122,11 +122,30 @@ def create_transaction(
         if not cat or cat.user_id != user.id or cat.kind != payload.kind:
             raise HTTPException(status_code=400, detail="Kategori tidak valid")
 
+    fee = payload.admin_fee or 0.0
+    needed = payload.amount + (fee if payload.kind == "transfer" else 0.0)
     if payload.kind in ("expense", "transfer"):
-        _ensure_balance(db, user, payload.account_id, payload.amount)
+        _ensure_balance(db, user, payload.account_id, needed)
 
-    tx = Transaction(user_id=user.id, **payload.model_dump())
+    tx = Transaction(user_id=user.id, **payload.model_dump(exclude={"admin_fee"}))
     db.add(tx)
+    if payload.kind == "transfer" and fee > 0:
+        cat_lain = db.query(Category).filter(
+            Category.user_id == user.id,
+            Category.kind == "expense",
+            Category.name == "Lainnya",
+        ).first()
+        fee_tx = Transaction(
+            user_id=user.id,
+            kind="expense",
+            amount=fee,
+            date=payload.date,
+            time=payload.time,
+            account_id=payload.account_id,
+            category_id=(cat_lain.id if cat_lain else None),
+            note="biaya admin transfer",
+        )
+        db.add(fee_tx)
     db.commit()
     db.refresh(tx)
     return tx

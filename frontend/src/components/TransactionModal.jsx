@@ -12,6 +12,7 @@ const emptyForm = {
   category_id: '',
   account_id: '',
   to_account_id: '',
+  admin_fee: '',
   note: ''
 }
 
@@ -48,6 +49,7 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
         category_id: editing.category_id ?? '',
         account_id: editing.account_id,
         to_account_id: editing.to_account_id ?? '',
+        admin_fee: '',
         note: editing.note || ''
       })
     } else {
@@ -87,6 +89,7 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
       time: form.time || null,
       account_id: Number(form.account_id),
       to_account_id: form.kind === 'transfer' && form.to_account_id ? Number(form.to_account_id) : null,
+      admin_fee: form.kind === 'transfer' && form.admin_fee ? Number(form.admin_fee) : null,
       category_id: form.category_id ? Number(form.category_id) : null,
       note: form.note || null
     }
@@ -161,6 +164,13 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
             <Select label="Ke Akun" required value={form.to_account_id} onChange={(e) => setForm({ ...form, to_account_id: e.target.value })}>
               <option value="">Pilih akun tujuan...</option>
               {toOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </Select>
+            <Select label="Biaya Admin" value={form.admin_fee} onChange={(e) => setForm({ ...form, admin_fee: e.target.value })}>
+              <option value="">Gratis</option>
+              <option value="500">Rp 500</option>
+              <option value="1000">Rp 1.000</option>
+              <option value="2500">Rp 2.500</option>
+              <option value="6500">Rp 6.500</option>
             </Select>
           </>
         ) : (

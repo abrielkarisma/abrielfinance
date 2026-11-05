@@ -141,6 +141,7 @@ class TransactionCreate(BaseModel):
     to_account_id: Optional[int] = None
     category_id: Optional[int] = None
     note: Optional[str] = Field(default=None, max_length=500)
+    admin_fee: Optional[float] = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _validate_transfer(self):
@@ -287,3 +288,28 @@ class AccountNumberOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class BudgetCreate(BaseModel):
+    category_id: int
+    amount: float = Field(ge=0)
+
+
+class BudgetUpdate(BaseModel):
+    amount: float = Field(ge=0)
+
+
+class BudgetOut(BaseModel):
+    id: int
+    category_id: int
+    amount: float
+
+    class Config:
+        from_attributes = True
+
+
+class BudgetProgressOut(BaseModel):
+    id: int
+    category: CategoryOut
+    amount: float
+    spent: float
