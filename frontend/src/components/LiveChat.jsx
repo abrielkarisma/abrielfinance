@@ -247,8 +247,8 @@ export default function LiveChat() {
 
   const renderBar = (title, sub) => (
     <div className="flex items-center gap-3 px-4 py-3">
-      <span className="boci-bob flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full">
-        <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
+      <span className="boci-bob flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#2b2118]">
+        <img src="/boci.png" alt="Boci" className="h-full w-full object-contain" />
       </span>
       <div className="min-w-0 leading-tight">
         <div className="truncate text-[15px] font-bold text-[#f5efe2]">{title}</div>
@@ -303,8 +303,8 @@ export default function LiveChat() {
       <span aria-hidden className="chip-drift pointer-events-none absolute left-8 top-14 rounded-full bg-[#5a4632] px-3 py-1.5 text-[11px] font-medium text-[#d8c9ae]">catat gofood 25rb</span>
       <span aria-hidden className="chip-drift-2 chip-drift pointer-events-none absolute right-6 top-28 rounded-full bg-[#5a4632] px-3 py-1.5 text-[11px] font-medium text-[#d8c9ae]">sisa budget?</span>
       <div className="flex flex-1 flex-col items-center justify-center px-6 pt-10 text-center">
-        <span className="boci-bob flex h-32 w-32 items-center justify-center overflow-hidden rounded-full ring-4 ring-[#f5a623]/30">
-          <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
+        <span className="boci-bob flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-[#2b2118] ring-4 ring-[#f5a623]/30">
+          <img src="/boci.png" alt="Boci" className="h-full w-full object-contain" />
         </span>
         <h2 className="mt-5 text-[26px] font-bold leading-tight text-[#f5efe2]">Halo, aku Boci.</h2>
         <p className="mt-1.5 max-w-[26ch] text-sm leading-relaxed text-[#a89372]">
@@ -332,8 +332,8 @@ export default function LiveChat() {
     list.map((m, i) => (
       <div key={i} className={cn('msg-in flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
         {m.role === 'assistant' && (
-          <span className="mr-1.5 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full">
-            <img src="/boci.png" alt="" className="h-full w-full object-cover" />
+          <span className="mr-1.5 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#2b2118]">
+            <img src="/boci.png" alt="" className="h-full w-full object-contain" />
           </span>
         )}
         <div
@@ -376,8 +376,8 @@ export default function LiveChat() {
         {renderBubbles(msgs)}
         {busy && (
           <div className="msg-in flex justify-start">
-            <span className="mr-1.5 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full">
-              <img src="/boci.png" alt="" className="h-full w-full object-cover" />
+            <span className="mr-1.5 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#2b2118]">
+              <img src="/boci.png" alt="" className="h-full w-full object-contain" />
             </span>
             <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-[6px] bg-[#2b2118] px-4 py-3">
               <span className="typing-dot h-1.5 w-1.5 rounded-full bg-[#f5a623]" />
@@ -495,7 +495,7 @@ export default function LiveChat() {
         className="fixed left-4 z-40 flex h-16 w-16 cursor-grab touch-none items-center justify-center overflow-hidden rounded-full ring-4 ring-[#f5a623] active:cursor-grabbing"
         style={{ top: fabTop, transform: fabTransform, backgroundColor: '#241a10' }}
       >
-        <img src="/boci.png" alt="Boci" className="h-full w-full scale-110 object-cover" />
+        <img src="/boci.png" alt="Boci" className="h-full w-full object-contain" />
       </button>
 
       {/* Panel: sarang coklat gelap, satu dunia sendiri */}
