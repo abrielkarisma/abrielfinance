@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api, { fmtIDR } from '../lib/api.js'
-import { Card } from '../components/ui.jsx'
+import { Card, Button, Modal } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useHideBal } from '../context/BalContext.jsx'
 import PeriodNav from '../components/PeriodNav.jsx'
@@ -119,6 +119,10 @@ export default function Grafik() {
   const [cats, setCats] = useState([])
   const [balancePie, setBalancePie] = useState([])
   const [selSum, setSelSum] = useState(null)
+  const [budgets, setBudgets] = useState([])
+  const [budgetDetail, setBudgetDetail] = useState(null)
+  const [budgetTx, setBudgetTx] = useState([])
+  const [budgetLoading, setBudgetLoading] = useState(false)
 
   // data periode terpilih: summary (untuk kartu & kategori) + distribusi saldo
   useEffect(() => {
@@ -129,6 +133,28 @@ export default function Grafik() {
       .catch(() => {})
     return () => { alive = false }
   }, [selPeriod?.start, selPeriod?.end])
+
+  // budget per kategori untuk periode terpilih
+  useEffect(() => {
+    if (!selPeriod) return
+    let alive = true
+    api.get('/budgets', { params: { start: selPeriod.start, end: selPeriod.end } })
+      .then((r) => { if (alive) setBudgets(r.data || []) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [selPeriod?.start, selPeriod?.end])
+
+  const openBudgetDetail = (b) => {
+    setBudgetDetail(b)
+    setBudgetTx([])
+    setBudgetLoading(true)
+    api.get('/transactions', {
+      params: { start: selPeriod.start, end: selPeriod.end, category_id: b.category.id, kind: 'expense', limit: 100 }
+    })
+      .then((r) => setBudgetTx(r.data.items || []))
+      .catch(() => {})
+      .finally(() => setBudgetLoading(false))
+  }
 
   useEffect(() => {
     if (!selPeriod) return
@@ -276,6 +302,54 @@ export default function Grafik() {
         </div>
       </Card>
 
+      <Card className="animate-rise">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-700">Budget Pengeluaran</h2>
+          <span className="text-xs font-semibold text-slate-500">{selPeriod?.label ?? ''} · klik bar untuk detail</span>
+        </div>
+        {budgets.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-400">Belum ada budget diatur. Set budget di menu Kategori.</p>
+        ) : (
+          <div className="space-y-4">
+            {budgets.map((b) => {
+              const pct = b.amount > 0 ? (b.spent / b.amount) * 100 : 0
+              const over = pct > 100
+              const width = Math.min(pct, 100)
+              const rem = b.amount - b.spent
+              return (
+                <button key={b.id} onClick={() => openBudgetDetail(b)}
+                  className="block w-full rounded-xl border border-slate-200 p-3 text-left transition-colors hover:bg-slate-50">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.category.color }} />
+                      {b.category.name}
+                    </span>
+                    <span className="text-xs text-slate-500 tnum">
+                      <span className="font-semibold text-slate-700">{hide ? 'Rp •••' : fmtIDR(b.spent)}</span>
+                      {' / '}{hide ? 'Rp •••' : fmtIDR(b.amount)}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full transition-all"
+                      style={{ width: `${width}%`, backgroundColor: over ? '#dc2626' : b.category.color }} />
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                    {over ? (
+                      <span className="font-semibold text-rose-600">Lebih {hide ? 'Rp •••' : fmtIDR(-rem)}</span>
+                    ) : (
+                      <span className={rem === 0 ? 'font-semibold text-amber-600' : 'text-emerald-600'}>
+                        Sisa {hide ? 'Rp •••' : fmtIDR(rem)}
+                      </span>
+                    )}
+                    <span className={over ? 'font-semibold text-rose-600' : 'text-slate-400'}>{Math.round(pct)}%</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="animate-rise" style={{ animationDelay: '180ms' }}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -345,6 +419,31 @@ export default function Grafik() {
           )}
         </Card>
       </div>
+
+      <Modal open={!!budgetDetail} onClose={() => setBudgetDetail(null)}
+        title={`Detail Budget · ${budgetDetail?.category?.name ?? ''}`}
+        subtitle={`Transaksi pengeluaran periode ${selPeriod?.label ?? ''}`}>
+        {budgetLoading ? (
+          <p className="py-6 text-center text-sm text-slate-400">Memuat…</p>
+        ) : budgetTx.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-400">Tidak ada transaksi dalam periode ini.</p>
+        ) : (
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+            {budgetTx.map((t) => (
+              <div key={t.id} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
+                <div>
+                  <div className="font-medium text-slate-700">{t.note || t.category?.name || 'Tanpa catatan'}</div>
+                  <div className="text-xs text-slate-400">{t.date}{t.time ? ` · ${t.time}` : ''}</div>
+                </div>
+                <span className="font-semibold text-ink tnum">{fmtIDR(t.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" onClick={() => setBudgetDetail(null)}>Tutup</Button>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -33,6 +33,9 @@ class User(Base):
     account_numbers = relationship(
         "AccountNumber", back_populates="user", cascade="all, delete-orphan"
     )
+    budgets = relationship(
+        "Budget", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Account(Base):
@@ -122,3 +125,16 @@ class AccountNumber(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="account_numbers")
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    amount: Mapped[float] = mapped_column(Numeric(14, 2))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="budgets")
+    category = relationship("Category")

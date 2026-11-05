@@ -13,6 +13,7 @@ from .routers import (
     accounts,
     admin,
     auth,
+    budgets,
     categories,
     reminders,
     reports,
@@ -71,6 +72,7 @@ app.include_router(transactions.router)
 app.include_router(reports.router)
 app.include_router(reminders.router)
 app.include_router(account_numbers.router)
+app.include_router(budgets.router)
 
 
 if DIST.is_dir():
