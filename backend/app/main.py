@@ -41,6 +41,8 @@ def _ensure_schema():
             conn.execute(text("ALTER TABLE profiles ADD COLUMN google_sub VARCHAR(255)"))
         if "email" not in cols:
             conn.execute(text("ALTER TABLE profiles ADD COLUMN email VARCHAR(255)"))
+        if "archived" not in cols:
+            conn.execute(text("ALTER TABLE profiles ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
 
 
 @asynccontextmanager

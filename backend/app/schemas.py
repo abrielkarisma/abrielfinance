@@ -16,8 +16,12 @@ class ProfileOut(BaseModel):
     name: str
     avatar_color: str = "#64748b"
     is_admin: bool = False
+    archived: bool = False
+    email: Optional[str] = None
+    google_sub: Optional[str] = None
     salary_day: Optional[int] = None
     salary_end_of_month: bool = False
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -52,15 +56,18 @@ class ServiceLoginRequest(BaseModel):
 
 class AdminProfileCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    pin: str
+    email: Optional[EmailStr] = None
     avatar_color: str = "#64748b"
-
-    _pin = field_validator("pin")(_check_pin)
 
 
 class AdminProfileUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
     avatar_color: Optional[str] = None
+
+
+class AdminRoleUpdate(BaseModel):
+    is_admin: bool
 
 
 class ResetPinRequest(BaseModel):

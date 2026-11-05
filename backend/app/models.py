@@ -16,6 +16,7 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     avatar_color: Mapped[str] = mapped_column(String(20), default="#64748b")
     is_admin: Mapped[bool] = mapped_column(default=False)
+    archived: Mapped[bool] = mapped_column(default=False)
     salary_day: Mapped[int | None] = mapped_column(nullable=True)
     salary_end_of_month: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

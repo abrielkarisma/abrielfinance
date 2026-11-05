@@ -227,6 +227,8 @@ def google_callback(code: str, request: FastAPIRequest, db: Session = Depends(ge
         profile.google_sub = google_sub
     if email:
         profile.email = email
+    if profile.archived:
+        raise HTTPException(status_code=403, detail="Profil diarsipkan. Hubungi admin.")
     db.commit()
     db.refresh(profile)
 
