@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -37,6 +37,9 @@ class User(Base):
     )
     budgets = relationship(
         "Budget", back_populates="user", cascade="all, delete-orphan"
+    )
+    chat_sessions = relationship(
+        "ChatSession", back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -140,3 +143,16 @@ class Budget(Base):
 
     user = relationship("User", back_populates="budgets")
     category = relationship("Category")
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    messages: Mapped[str] = mapped_column(Text, default="[]")
+    message_count: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="chat_sessions")
