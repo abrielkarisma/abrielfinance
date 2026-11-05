@@ -15,6 +15,7 @@ from .routers import (
     auth,
     budgets,
     categories,
+    livechat,
     reminders,
     reports,
     transactions,
@@ -77,6 +78,7 @@ app.include_router(reports.router)
 app.include_router(reminders.router)
 app.include_router(account_numbers.router)
 app.include_router(budgets.router)
+app.include_router(livechat.router)
 
 
 if DIST.is_dir():

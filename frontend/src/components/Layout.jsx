@@ -7,6 +7,7 @@ import api from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useHideBal } from '../context/BalContext.jsx'
 import TransactionModal from './TransactionModal.jsx'
+import LiveChat from './LiveChat.jsx'
 import { cn } from './ui.jsx'
 import FundyLogo from './FundyLogo.jsx'
 
@@ -278,6 +279,7 @@ export default function Layout() {
       </button>
 
       <TransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <LiveChat />
     </div>
   )
 }

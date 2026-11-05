@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://127.0.0.1:8000/api/auth/google/callback"
     API_SERVICE_KEY: str = ""
+    HERMES_API_URL: str = "http://127.0.0.1:8642"
+    HERMES_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
