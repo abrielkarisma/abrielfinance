@@ -45,18 +45,9 @@ class Token(BaseModel):
     user: ProfileOut
 
 
-class ProfileLoginRequest(BaseModel):
+class ServiceLoginRequest(BaseModel):
+    api_key: str
     profile_id: int
-    pin: str
-
-    _pin = field_validator("pin")(_check_pin)
-
-
-class SetupRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    pin: str
-
-    _pin = field_validator("pin")(_check_pin)
 
 
 class AdminProfileCreate(BaseModel):

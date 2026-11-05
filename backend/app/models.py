@@ -12,6 +12,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
     pin_hash: Mapped[str] = mapped_column(String(255))
+    google_sub: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     avatar_color: Mapped[str] = mapped_column(String(20), default="#64748b")
     is_admin: Mapped[bool] = mapped_column(default=False)
     salary_day: Mapped[int | None] = mapped_column(nullable=True)

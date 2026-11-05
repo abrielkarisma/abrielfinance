@@ -4,6 +4,7 @@ import { HideBalProvider } from './context/BalContext.jsx'
 import Layout from './components/Layout.jsx'
 import { Toaster } from './components/toast.jsx'
 import Login from './pages/Login.jsx'
+import GoogleCallback from './pages/GoogleCallback.jsx'
 import Admin from './pages/Admin.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Transactions from './pages/Transactions.jsx'
@@ -32,6 +33,7 @@ export default function App() {
         <Toaster />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/auth/google-callback" element={<GoogleCallback />} />
           <Route
             path="/"
             element={

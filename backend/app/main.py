@@ -36,6 +36,10 @@ def _ensure_schema():
                     "BOOLEAN NOT NULL DEFAULT 0"
                 )
             )
+        if "google_sub" not in cols:
+            conn.execute(text("ALTER TABLE profiles ADD COLUMN google_sub VARCHAR(255)"))
+        if "email" not in cols:
+            conn.execute(text("ALTER TABLE profiles ADD COLUMN email VARCHAR(255)"))
 
 
 @asynccontextmanager
