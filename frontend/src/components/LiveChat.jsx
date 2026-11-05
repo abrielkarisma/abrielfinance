@@ -144,8 +144,8 @@ export default function LiveChat() {
 
   const renderHeader = (title, onClose) => (
     <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: bubbleColor }}>
-        {(profile?.name || 'A').charAt(0).toUpperCase()}
+      <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full ring-1 ring-black/5" style={{ backgroundColor: bubbleColor }}>
+        <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
       </span>
       <div className="leading-tight">
         <div className="text-sm font-semibold text-ink">{title}</div>
@@ -161,8 +161,8 @@ export default function LiveChat() {
 
   const renderSplash = () => (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl shadow-lg" style={{ backgroundColor: bubbleColor }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full shadow-lg ring-1 ring-black/5" style={{ backgroundColor: bubbleColor }}>
+        <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
       </div>
       <div>
         <div className="text-base font-bold text-ink">Boci</div>
@@ -286,8 +286,8 @@ export default function LiveChat() {
               onClick={() => openDetail(s.id)}
               className="mb-1.5 flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left hover:shadow-sm"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: bubbleColor }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ backgroundColor: bubbleColor }}>
+                <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-ink">{s.title}</span>
