@@ -334,14 +334,10 @@ export default function LiveChat() {
         onClick={(e) => { if (e.detail > 0 && !movedRef.current) toggleOpen() }}
         aria-label="Boci chat"
         title="Boci — asisten keuangan"
-        className="fixed left-4 z-40 flex h-14 w-14 cursor-grab touch-none items-center justify-center rounded-full shadow-xl ring-1 ring-black/10 active:cursor-grabbing"
-        style={{ top: fabTop, transform: fabTransform, backgroundColor: bubbleColor, color: '#fff' }}
+        className="fixed left-4 z-40 flex h-14 w-14 cursor-grab touch-none items-center justify-center overflow-hidden rounded-full shadow-xl ring-1 ring-black/10 active:cursor-grabbing"
+        style={{ top: fabTop, transform: fabTransform, backgroundColor: bubbleColor }}
       >
-        {open ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        )}
+        <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
       </button>
 
       {/* Panel */}
