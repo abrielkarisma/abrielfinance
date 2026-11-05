@@ -41,9 +41,12 @@ export function Button({ variant = 'primary', className = '', loading = false, d
 }
 
 /* Resting card: tone step surface, no border, no shadow.
-   Dark: one lightness step above ground. */
+   Dark: one lightness step above ground.
+   If caller passes its own bg-*, the default surface is skipped so it
+   never fights the custom background (e.g. ink hero). */
 export function Card({ className = '', children, ...props }) {
-  return <div className={cn('rounded-[20px] bg-surface p-5 dark:bg-[#171916]', className)} {...props}>{children}</div>
+  const hasBg = /\bbg-/.test(className)
+  return <div className={cn('rounded-[20px] p-5', !hasBg && 'bg-surface dark:bg-[#171916]', className)} {...props}>{children}</div>
 }
 
 export function Input({ className = '', label, error, prefix, ...props }) {

@@ -111,23 +111,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Hero answer: net balance leads at 32px, in/out beside it. Biggest number answers the title. */}
-      <Card className="animate-rise bg-ink text-white dark:bg-[#f2f3ef] dark:text-[#101210]">
+      {/* Hero answer: net balance leads at 32px. Biggest number answers the title. */}
+      <div className="animate-rise rounded-[20px] bg-ink p-5 text-white dark:bg-[#f2f3ef] dark:text-[#101210]">
         <p className="text-[13px] font-medium opacity-70">Saldo periode ini</p>
         <p className={`mt-1 text-[32px] font-bold leading-tight tnum ${balance < 0 ? 'text-down' : ''}`}>
           {fmtM(balance)}
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-[12px] bg-active px-3.5 py-3 dark:bg-[#262923]">
-            <p className="text-[13px] font-medium text-sub">Masuk</p>
-            <p className="mt-0.5 text-lg font-semibold text-up tnum">{fmtM(summary?.total_income)}</p>
+          <div className="rounded-[12px] bg-white/15 px-3.5 py-3 dark:bg-black/5">
+            <p className="text-[13px] font-medium opacity-70">Masuk</p>
+            <p className="mt-0.5 text-lg font-semibold text-white tnum dark:text-[#101210]">{fmtM(summary?.total_income)}</p>
           </div>
-          <div className="rounded-[12px] bg-active px-3.5 py-3 dark:bg-[#262923]">
-            <p className="text-[13px] font-medium text-sub">Keluar</p>
-            <p className="mt-0.5 text-lg font-semibold text-ink tnum">{fmtM(summary?.total_expense)}</p>
+          <div className="rounded-[12px] bg-white/15 px-3.5 py-3 dark:bg-black/5">
+            <p className="text-[13px] font-medium opacity-70">Keluar</p>
+            <p className="mt-0.5 text-lg font-semibold text-white tnum dark:text-[#101210]">{fmtM(summary?.total_expense)}</p>
           </div>
         </div>
-      </Card>
+      </div>
 
       <Card className="animate-rise" style={{ animationDelay: '60ms' }}>
         <h2 className="mb-1">Saldo per akun</h2>

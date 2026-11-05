@@ -11,6 +11,8 @@
 @theme {
   --font-sans: "Manrope", Inter, system-ui, sans-serif;
 
+  --color-white: #ffffff;
+
   --color-paper: #f8f7f4;
   --color-surface: #ffffff;
   --color-raised: #f2f0ea;
