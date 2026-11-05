@@ -182,4 +182,39 @@ html { scrollbar-color: var(--color-control) transparent; }
   .animate-rise { animation: none; }
   .fade-in, .toast-in { animation: none; }
   html { scroll-behavior: auto; }
+  .msg-in, .panel-in, .boci-bob, .chip-drift, .typing-dot { animation: none; }
 }
+
+/* ---------- Boci chat motion (transform + opacity only) ---------- */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.msg-in { animation: msg-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.panel-in { animation: panel-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes boci-bob {
+  0%, 100% { transform: translateY(-2px); }
+  50% { transform: translateY(2px); }
+}
+.boci-bob { animation: boci-bob 5s ease-in-out infinite; }
+
+@keyframes drift {
+  0%, 100% { transform: translateY(-4px) rotate(-2deg); }
+  50% { transform: translateY(4px) rotate(2deg); }
+}
+.chip-drift { animation: drift 6s ease-in-out infinite; }
+.chip-drift-2 { animation: drift 7s ease-in-out -3s infinite; }
+
+@keyframes dot-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.typing-dot { animation: dot-bounce 1.2s ease-in-out infinite; }
+.typing-dot-2 { animation-delay: 0.15s; }
+.typing-dot-3 { animation-delay: 0.3s; }
