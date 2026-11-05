@@ -9,11 +9,21 @@ const MENU_ITEMS = [
   { key: 'history', label: 'Riwayat chat', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg> }
 ]
 
+const AUTO_CLOSE_MS = 5 * 60 * 1000
+const DRAFT_KEY = 'fundy-boci-draft'
+
 export default function LiveChat() {
   const { profile } = useAuth()
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('splash') // splash | chat | history | detail
-  const [msgs, setMsgs] = useState([])
+  const [msgs, setMsgs] = useState(() => {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null')
+      return d && Array.isArray(d.messages) ? d.messages : []
+    } catch {
+      return []
+    }
+  })
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [fabY, setFabY] = useState(() => {
@@ -29,6 +39,28 @@ export default function LiveChat() {
   const inputRef = useRef(null)
   const dragRef = useRef(null)
   const movedRef = useRef(false)
+  const msgsRef = useRef(msgs)
+  const lastActiveRef = useRef(Date.now())
+
+  useEffect(() => {
+    msgsRef.current = msgs
+  }, [msgs])
+
+  const saveDraft = () => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ messages: msgsRef.current, lastActive: Date.now() }))
+  }
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY)
+  }
+  const draftExpired = () => {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null')
+      if (!d || !d.lastActive) return false
+      return Date.now() - d.lastActive > AUTO_CLOSE_MS
+    } catch {
+      return false
+    }
+  }
 
   // get FAB posisi awal (kiri tengah) kalau belum pernah setup
   const fabTop = fabY != null ? `${fabY}px` : '50%'
@@ -63,17 +95,28 @@ export default function LiveChat() {
   }, [fabY])
 
   const toggleOpen = () => {
-    setOpen((o) => !o)
-    if (!open) {
-      setView('splash')
-      setMenuOpen(false)
+    if (open) {
+      setOpen(false)
+      return
     }
+    setMenuOpen(false)
+    // kalau ada draft sesi aktif & belum expired -> buka langsung ke sesi itu
+    if (!draftExpired() && msgsRef.current.length > 0) {
+      setView('chat')
+      lastActiveRef.current = Date.now()
+      saveDraft()
+    } else {
+      setView('splash')
+    }
+    setOpen(true)
   }
 
   const startNewChat = () => {
+    clearDraft()
     setMsgs([])
     setView('chat')
     setMenuOpen(false)
+    lastActiveRef.current = Date.now()
   }
 
   const goSplash = () => {
@@ -94,6 +137,11 @@ export default function LiveChat() {
   }
 
   const openHistory = () => {
+    // simpan draft sesi aktif dulu (masih bisa dilanjutin, rehat 5 mnt)
+    if (msgsRef.current.length > 0) {
+      lastActiveRef.current = Date.now()
+      saveDraft()
+    }
     setMenuOpen(false)
     setView('history')
     fetchHistory()
@@ -112,16 +160,28 @@ export default function LiveChat() {
   // close chat -> simpan ke server lalu lempar ke splash (tidak bisa lanjut)
   const closeChat = async () => {
     setMenuOpen(false)
-    if (msgs.length > 0) {
-      const firstUser = msgs.find((m) => m.role === 'user')
+    if (msgsRef.current.length > 0) {
+      const firstUser = msgsRef.current.find((m) => m.role === 'user')
       const title = firstUser ? String(firstUser.content).slice(0, 60) : 'Obrolan baru'
       try {
-        await api.post('/livechat/close', { title, messages: msgs })
+        await api.post('/livechat/close', { title, messages: msgsRef.current })
       } catch { /* simpan gagal, tetap lanjut ke splash */ }
     }
+    clearDraft()
     setMsgs([])
     setView('splash')
   }
+
+  // auto-close: 5 menit tanpa interaksi -> simpan ke server + back ke splash
+  useEffect(() => {
+    if (!open || view !== 'chat') return
+    const iv = setInterval(() => {
+      if (draftExpired()) {
+        closeChat()
+      }
+    }, 5000)
+    return () => clearInterval(iv)
+  }, [open, view])
 
   const send = async () => {
     const text = input.trim()
@@ -130,6 +190,7 @@ export default function LiveChat() {
     setMsgs(next)
     setInput('')
     setBusy(true)
+    lastActiveRef.current = Date.now()
     try {
       const { data } = await api.post('/livechat', { message: text, history: msgs })
       setMsgs((m) => [...m, { role: 'assistant', content: data.reply }])
@@ -137,6 +198,7 @@ export default function LiveChat() {
       setMsgs((m) => [...m, { role: 'assistant', content: '⚠️ ' + (e?.response?.data?.detail || 'Bot tidak terjangkau. Coba lagi.') }])
     } finally {
       setBusy(false)
+      saveDraft()
     }
   }
 
@@ -160,7 +222,14 @@ export default function LiveChat() {
   )
 
   const renderSplash = () => (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="relative flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <button
+        onClick={() => setOpen(false)}
+        aria-label="Tutup"
+        className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
       <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full shadow-lg ring-1 ring-black/5" style={{ backgroundColor: bubbleColor }}>
         <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
       </div>
@@ -221,18 +290,21 @@ export default function LiveChat() {
 
       <div className="relative border-t border-slate-100 px-3 py-2.5">
         {menuOpen && (
-          <div className="absolute bottom-full left-1 mb-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-            {MENU_ITEMS.map((item) => (
-              <button
-                key={item.key}
-                onClick={() => item.key === 'close' ? closeChat() : item.key === 'new' ? startNewChat() : openHistory()}
-                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-ink"
-              >
-                <span className="text-slate-400">{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+            <div className="absolute bottom-full left-1 z-20 mb-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              {MENU_ITEMS.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => item.key === 'close' ? closeChat() : item.key === 'new' ? startNewChat() : openHistory()}
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-ink"
+                >
+                  <span className="text-slate-400">{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
         <div className="flex items-center gap-2">
           <button
