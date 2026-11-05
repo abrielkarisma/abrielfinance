@@ -4,11 +4,11 @@ export function cn(...parts) {
   return parts.filter(Boolean).join(' ')
 }
 
+/* Category hues — indigo/violet removed. Transfer uses ink grey. */
 export const PALETTE = [
-  '#1D5FBF', '#C41C29', '#2F7A45', '#B45309', '#2A8798',
-  '#7C3AED', '#BE408C', '#3F6212', '#4F46E5', '#57534E'
+  '#1D5FB6', '#C4242A', '#247B50', '#B45309', '#2A8798',
+  '#BE408C', '#3F6212', '#D97706', '#57534E', '#0A3A80'
 ]
-
 
 function hexToRgb(h) {
   const s = h.replace('#', '')
@@ -25,11 +25,11 @@ function shade(hex, amt) {
 
 export function Button({ variant = 'primary', className = '', loading = false, disabled = false, children, ...props }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none active:translate-y-px h-11'
+    'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[12px] px-4 text-sm font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none active:translate-y-px'
   const variants = {
     primary: 'btn-primary',
-    ghost: 'bg-transparent text-ink hover:bg-slate-100',
-    danger: 'bg-down text-white hover:bg-red-600',
+    ghost: 'bg-transparent text-ink hover:bg-raised',
+    danger: 'btn-danger',
     outline: 'btn-outline'
   }
   return (
@@ -40,23 +40,25 @@ export function Button({ variant = 'primary', className = '', loading = false, d
   )
 }
 
-export function Card({ className = '', children }) {
-  return <div className={cn('rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(16,24,40,0.05)]', className)}>{children}</div>
+/* Resting card: tone step surface, no border, no shadow.
+   Dark: one lightness step above ground. */
+export function Card({ className = '', children, ...props }) {
+  return <div className={cn('rounded-[20px] bg-surface p-5 dark:bg-[#171916]', className)} {...props}>{children}</div>
 }
 
 export function Input({ className = '', label, error, prefix, ...props }) {
   const box = cn(
-    'w-full rounded-[10px] border border-[#e6e6e6] bg-white text-sm outline-none transition-shadow h-11 focus:border-accent focus:ring-2 focus:ring-accent/15',
-    prefix ? 'pl-10' : 'px-3.5',
+    'w-full rounded-[12px] min-h-[44px] border border-control bg-surface text-sm text-ink outline-none transition-colors focus:border-accent px-3.5',
+    prefix ? 'pl-10' : '',
     error && 'border-down',
     className
   )
   return (
     <label className="block">
-      {label && <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-sub">{label}</span>}
       <div className="relative">
         {prefix && (
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-sm font-semibold text-slate-400">
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-sm font-semibold text-faint">
             {prefix}
           </span>
         )}
@@ -70,10 +72,10 @@ export function Input({ className = '', label, error, prefix, ...props }) {
 export function Select({ className = '', label, children, ...props }) {
   return (
     <label className="block">
-      {label && <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-sub">{label}</span>}
       <select
         className={cn(
-          'w-full rounded-[10px] border border-[#e6e6e6] bg-white px-3.5 text-sm outline-none h-11 focus:border-accent focus:ring-2 focus:ring-accent/15',
+          'w-full rounded-[12px] min-h-[44px] border border-control bg-surface text-ink px-3.5 text-sm outline-none transition-colors focus:border-accent',
           className
         )}
         {...props}
@@ -84,11 +86,11 @@ export function Select({ className = '', label, children, ...props }) {
   )
 }
 
-
-export function Badge({ color = '#1D5FBF', children }) {
+/* Pastel chip: pale tint + dark of same hue. Never above a heading. */
+export function Badge({ color = '#1D5FB6', children }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+      className="inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold"
       style={{ backgroundColor: shade(color, 0.85), color: shade(color, -0.45) }}
     >
       {children}
@@ -99,20 +101,20 @@ export function Badge({ color = '#1D5FBF', children }) {
 export function ColorPicker({ value, onChange }) {
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-medium text-slate-600">Warna</span>
+      <span className="mb-1.5 block text-sm font-medium text-sub">Warna</span>
       <div className="flex flex-wrap items-center gap-2">
         {PALETTE.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => onChange(c)}
-            className={`h-7 w-7 rounded-full transition-transform hover:scale-110 ${value === c ? 'ring-2 ring-offset-2 ring-accent' : ''}`}
+            className={`h-9 w-9 rounded-full transition-transform hover:scale-110 ${value === c ? 'ring-2 ring-offset-2 ring-accent' : ''}`}
             style={{ backgroundColor: c }}
             aria-label={`Warna ${c}`}
           />
         ))}
         <label
-          className="relative h-8 w-8 cursor-pointer rounded-full border border-slate-300"
+          className="relative h-9 w-9 cursor-pointer rounded-full border border-control"
           style={{ backgroundColor: value }}
           title="Pilih warna lain"
         >
@@ -122,8 +124,8 @@ export function ColorPicker({ value, onChange }) {
             onChange={(e) => onChange(e.target.value)}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-white drop-shadow">
-            ＋
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-bold text-white">
+            +
           </span>
         </label>
       </div>
@@ -131,33 +133,34 @@ export function ColorPicker({ value, onChange }) {
   )
 }
 
+/* Dialog: flat opaque sheet, scrim only. No blur, no shadow-at-rest. */
 export function Modal({ open, onClose, title, subtitle, icon, children }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_64px_rgba(16,24,40,0.22)] max-h-[90vh] overflow-y-auto fade-in">
-        <div className="flex items-start justify-between gap-3 px-6 pb-4 pt-5">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[20px] bg-surface p-0 fade-in dark:bg-[#171916]">
+        <div className="flex items-start justify-between gap-3 bg-raised px-6 pb-4 pt-5 dark:bg-[#1e211c]">
           <div className="flex items-start gap-3">
             {icon && (
-              <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-accent-soft text-accent-ink dark:text-accent">
                 {icon}
               </div>
             )}
             <div>
               <h3 className="text-lg font-bold text-ink leading-tight">{title}</h3>
-              {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+              {subtitle && <p className="mt-0.5 text-sm text-sub">{subtitle}</p>}
             </div>
           </div>
           <button
-            className="-mr-2 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-ink"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-faint transition-colors hover:bg-active hover:text-ink"
             onClick={onClose}
             aria-label="Tutup"
           >
             <X size={18} />
           </button>
         </div>
-        <div className="px-6 pb-6">{children}</div>
+        <div className="px-6 pb-6 pt-4">{children}</div>
       </div>
     </div>
   )

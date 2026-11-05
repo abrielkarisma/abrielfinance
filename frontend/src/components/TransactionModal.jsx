@@ -16,10 +16,11 @@ const emptyForm = {
   note: ''
 }
 
+/* Kind segmented control: one ink fill on the active, quiet tone on the rest. */
 const KIND_BTNS = [
-  { id: 'expense', label: 'Pengeluaran', icon: <ArrowDownLeft size={17} />, active: 'border-rose-300 bg-rose-50 text-rose-700', idle: 'border-slate-200 text-slate-600 hover:bg-slate-50' },
-  { id: 'income', label: 'Pemasukan', icon: <ArrowUpRight size={17} />, active: 'border-emerald-300 bg-emerald-50 text-emerald-700', idle: 'border-slate-200 text-slate-600 hover:bg-slate-50' },
-  { id: 'transfer', label: 'Pindah Dana', icon: <ArrowLeftRight size={17} />, active: 'border-indigo-300 bg-indigo-50 text-indigo-700', idle: 'border-slate-200 text-slate-600 hover:bg-slate-50' }
+  { id: 'expense', label: 'Pengeluaran', icon: <ArrowDownLeft size={17} /> },
+  { id: 'income', label: 'Pemasukan', icon: <ArrowUpRight size={17} /> },
+  { id: 'transfer', label: 'Pindah dana', icon: <ArrowLeftRight size={17} /> }
 ]
 
 export default function TransactionModal({ open, onClose, editing, onSaved }) {
@@ -108,24 +109,27 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
     }
   }
 
-  const inputCls = 'rounded-[10px] border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/15'
+  const inputCls = 'min-h-[44px] rounded-[12px] border border-control bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-accent'
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? 'Edit Transaksi' : 'Tambah Transaksi'}
+      title={editing ? 'Edit transaksi' : 'Tambah transaksi'}
       subtitle={editing ? 'Perbarui detail transaksi.' : 'Catat uang masuk, keluar, atau pindah antar akun.'}
       icon={<Wallet size={22} strokeWidth={2} />}
     >
-      <form onSubmit={submit} className="space-y-5">
-        <div className="grid grid-cols-3 gap-2">
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-3 gap-1 rounded-[12px] bg-raised p-1 dark:bg-[#1e211c]" role="group" aria-label="Jenis transaksi">
           {KIND_BTNS.map((k) => (
             <button
               key={k.id}
               type="button"
               onClick={() => setKind(k.id)}
-              className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-[13px] font-semibold transition-colors ${form.kind === k.id ? k.active : k.idle}`}
+              aria-pressed={form.kind === k.id}
+              className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[8px] px-2 text-[13px] font-semibold transition-colors ${
+                form.kind === k.id ? 'chip-active' : 'text-sub hover:text-ink'
+              }`}
             >
               {k.icon}
               {k.label}
@@ -144,9 +148,9 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
           onChange={(e) => setForm({ ...form, amount: fmtMoney(e.target.value) })}
         />
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-600">Tanggal & jam</label>
-            <button type="button" onClick={setNow} className="flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-accent transition-colors hover:bg-slate-50">
+          <div className="mb-1.5 flex min-h-[44px] items-center justify-between">
+            <label className="text-sm font-medium text-sub">Tanggal dan jam</label>
+            <button type="button" onClick={setNow} className="flex min-h-[44px] items-center gap-1 rounded-[8px] px-2 text-xs font-semibold text-accent transition-colors hover:bg-raised">
               <Clock size={14} /> Sekarang
             </button>
           </div>
@@ -157,15 +161,15 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
         </div>
         {form.kind === 'transfer' ? (
           <>
-            <Select label="Dari Akun" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
-              <option value="">Pilih akun asal...</option>
+            <Select label="Dari akun" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
+              <option value="">Pilih akun asal</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
-            <Select label="Ke Akun" required value={form.to_account_id} onChange={(e) => setForm({ ...form, to_account_id: e.target.value })}>
-              <option value="">Pilih akun tujuan...</option>
+            <Select label="Ke akun" required value={form.to_account_id} onChange={(e) => setForm({ ...form, to_account_id: e.target.value })}>
+              <option value="">Pilih akun tujuan</option>
               {toOptions.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
-            <Select label="Biaya Admin" value={form.admin_fee} onChange={(e) => setForm({ ...form, admin_fee: e.target.value })}>
+            <Select label="Biaya admin" value={form.admin_fee} onChange={(e) => setForm({ ...form, admin_fee: e.target.value })}>
               <option value="">Gratis</option>
               <option value="500">Rp 500</option>
               <option value="1000">Rp 1.000</option>
@@ -176,7 +180,7 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
         ) : (
           <>
             <Select label="Akun (wajib)" required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
-              <option value="">Pilih akun...</option>
+              <option value="">Pilih akun</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
             <Select label="Kategori" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
@@ -186,10 +190,10 @@ export default function TransactionModal({ open, onClose, editing, onSaved }) {
           </>
         )}
         <Input label="Catatan (opsional)" placeholder={form.kind === 'transfer' ? 'cth: Transfer ke OVO' : 'cth: Makan siang'} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-        {err && <p className="text-sm text-rose-600">{err}</p>}
+        {err && <p className="text-sm text-down">{err}</p>}
         <div className="grid grid-cols-2 gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
-          <Button type="submit" loading={saving}><Check size={16} /> {editing ? 'Simpan Perubahan' : 'Simpan'}</Button>
+          <Button type="submit" loading={saving}><Check size={16} /> {editing ? 'Simpan perubahan' : 'Simpan'}</Button>
         </div>
       </form>
     </Modal>

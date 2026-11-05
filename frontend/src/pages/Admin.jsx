@@ -133,39 +133,40 @@ export default function Admin() {
   const nArsip = profiles.filter((p) => p.archived).length
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">Super Admin</h1>
-          <p className="text-sm text-slate-500">Kelola profil & peran user — hanya admin.</p>
+          <h1>Super admin</h1>
+          <p className="mt-0.5 text-sm text-sub">Kelola profil dan peran user. Hanya admin.</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>+ Profil Baru</Button>
+        <Button onClick={() => setShowCreate(true)}>Profil baru</Button>
       </div>
 
       {/* Blok 3: statistik ringkas */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="p-4">
-          <p className="text-xs text-slate-500">Total Profil</p>
-          <p className="mt-1 text-2xl font-bold text-slate-800">{profiles.length}</p>
+          <p className="text-[13px] text-sub">Total profil</p>
+          <p className="mt-1 text-2xl font-semibold text-ink tnum">{profiles.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-slate-500">Admin</p>
-          <p className="mt-1 text-2xl font-bold text-amber-600">{nAdmin}</p>
+          <p className="text-[13px] text-sub">Admin</p>
+          <p className="mt-1 text-2xl font-semibold text-warning tnum">{nAdmin}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-slate-500">Diarsipkan</p>
-          <p className="mt-1 text-2xl font-bold text-slate-500">{nArsip}</p>
+          <p className="text-[13px] text-sub">Diarsipkan</p>
+          <p className="mt-1 text-2xl font-semibold text-sub tnum">{nArsip}</p>
         </Card>
       </div>
 
       {/* Filter */}
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         {[['semua', 'Semua'], ['aktif', 'Aktif'], ['arsip', 'Diarsipkan']].map(([k, label]) => (
           <button
             key={k}
             onClick={() => setFilter(k)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-              filter === k ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            aria-pressed={filter === k}
+            className={`flex min-h-[44px] items-center rounded-full px-4 text-xs font-semibold transition-colors ${
+              filter === k ? 'chip-active' : 'bg-raised text-sub hover:bg-active dark:bg-[#1e211c]'
             }`}
           >
             {label}
@@ -174,47 +175,47 @@ export default function Admin() {
       </div>
 
       {loading ? (
-        <Card><span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" /></Card>
+        <Card><span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" /></Card>
       ) : (
-        <Card className="space-y-2">
+        <Card className="space-y-1 p-2 sm:p-3">
           {visible.map((p) => (
-            <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+            <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-raised px-3.5 py-3 dark:bg-[#1e211c]">
               <Avatar p={p} size={44} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-800">{p.name}</span>
-                  {p.is_admin && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">Admin</span>}
-                  {p.archived && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">Arsip</span>}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-medium text-ink">{p.name}</span>
+                  {p.is_admin && <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">Admin</span>}
+                  {p.archived && <span className="rounded-full bg-active px-2 py-0.5 text-[10px] font-bold text-sub">Arsip</span>}
                 </div>
-                <span className="block text-xs text-slate-400">
-                  {p.email || '— belum ada email —'} · bergabung {p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                <span className="block truncate text-xs text-faint">
+                  {p.email || 'Belum ada email'} · bergabung {p.created_at ? new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '–'}
                 </span>
               </div>
               <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
                 <Button variant="outline" onClick={() => openDetail(p)}>Detail</Button>
                 <Button variant="outline" onClick={() => { setEditTarget(p); setEditForm({ name: p.name, email: p.email || '', avatar_color: p.avatar_color }); setShowEdit(true) }}>Ubah</Button>
-                <Button variant="outline" onClick={() => toggleRole(p)}>{p.is_admin ? 'Turunkan' : 'Jadikan Admin'}</Button>
+                <Button variant="outline" onClick={() => toggleRole(p)}>{p.is_admin ? 'Turunkan' : 'Jadikan admin'}</Button>
                 <Button variant="outline" onClick={() => toggleArchive(p)}>{p.archived ? 'Pulihkan' : 'Arsipkan'}</Button>
                 <Button variant="danger" onClick={() => remove(p)}>Hapus</Button>
               </div>
             </div>
           ))}
-          {visible.length === 0 && <p className="text-sm text-slate-500">Tidak ada profil.</p>}
+          {visible.length === 0 && <p className="py-6 text-center text-sm text-faint">Tidak ada profil.</p>}
         </Card>
       )}
 
       {/* Modal buat profil baru (tanpa PIN) */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Buat Profil Baru">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Buat profil baru">
         <form onSubmit={create} className="space-y-4">
           <Input label="Nama profil" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <Input label="Email Google (opsional) — biar langsung nyambung saat login" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <Input label="Email Google (opsional)" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Biar langsung nyambung saat login" />
           <ColorPicker value={form.avatar_color} onChange={(c) => setForm({ ...form, avatar_color: c })} />
           <Button type="submit" disabled={busy || !form.name.trim()} className="w-full">{busy ? 'Menyimpan…' : 'Simpan'}</Button>
         </form>
       </Modal>
 
       {/* Modal ubah profil */}
-      <Modal open={showEdit} onClose={() => setShowEdit(false)} title={`Ubah Profil — ${editTarget?.name || ''}`}>
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title={`Ubah profil: ${editTarget?.name || ''}`}>
         <form onSubmit={saveEdit} className="space-y-4">
           <Input label="Nama profil" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
           <Input label="Email Google" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
@@ -224,30 +225,30 @@ export default function Admin() {
       </Modal>
 
       {/* Modal detail + statistik */}
-      <Modal open={!!detailTarget} onClose={() => setDetailTarget(null)} title={`Detail — ${detailTarget?.name || ''}`}>
+      <Modal open={!!detailTarget} onClose={() => setDetailTarget(null)} title={`Detail: ${detailTarget?.name || ''}`}>
         {detailLoading ? (
-          <div className="flex justify-center py-6"><span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" /></div>
+          <div className="flex justify-center py-6"><span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>
         ) : detailStats ? (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Avatar p={detailTarget} size={48} />
-              <div>
-                <p className="font-semibold text-slate-800">{detailTarget?.name}</p>
-                <p className="text-xs text-slate-400">{detailTarget?.email || 'tanpa email'}</p>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-ink">{detailTarget?.name}</p>
+                <p className="truncate text-xs text-faint">{detailTarget?.email || 'tanpa email'}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="p-3"><p className="text-xs text-slate-500">Total Saldo</p><p className="text-lg font-bold text-emerald-600">{findRupiah(detailStats.balance)}</p></Card>
-              <Card className="p-3"><p className="text-xs text-slate-500">Transaksi</p><p className="text-lg font-bold text-slate-800">{detailStats.transaction_count}</p></Card>
-              <Card className="p-3"><p className="text-xs text-slate-500">Akun</p><p className="text-lg font-bold text-slate-800">{detailStats.account_count}</p></Card>
-              <Card className="p-3"><p className="text-xs text-slate-500">Kategori</p><p className="text-lg font-bold text-slate-800">{detailStats.category_count}</p></Card>
+            <div className="grid grid-cols-2 gap-2">
+              <Card className="bg-raised p-3 dark:bg-[#1e211c]"><p className="text-[13px] text-sub">Total saldo</p><p className="text-lg font-semibold text-up tnum">{findRupiah(detailStats.balance)}</p></Card>
+              <Card className="bg-raised p-3 dark:bg-[#1e211c]"><p className="text-[13px] text-sub">Transaksi</p><p className="text-lg font-semibold text-ink tnum">{detailStats.transaction_count}</p></Card>
+              <Card className="bg-raised p-3 dark:bg-[#1e211c]"><p className="text-[13px] text-sub">Akun</p><p className="text-lg font-semibold text-ink tnum">{detailStats.account_count}</p></Card>
+              <Card className="bg-raised p-3 dark:bg-[#1e211c]"><p className="text-[13px] text-sub">Kategori</p><p className="text-lg font-semibold text-ink tnum">{detailStats.category_count}</p></Card>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-faint">
               Transaksi terakhir: {detailStats.last_transaction_date || 'belum ada'}
             </p>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">Gagal memuat detail.</p>
+          <p className="text-sm text-sub">Gagal memuat detail.</p>
         )}
       </Modal>
     </div>

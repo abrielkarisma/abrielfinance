@@ -10,15 +10,16 @@ import { usePeriods } from '../lib/periods.js'
 import { BarChart, Bar, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 const cssVar = (n, fb) => (getComputedStyle(document.documentElement).getPropertyValue(n).trim() || fb)
-const INCOME_COLOR = '#2f7a45'
-const EXPENSE_COLOR = '#1b1d1f'
+const INCOME_COLOR = '#247b50'
+const EXPENSE_COLOR = '#1d5fb6'
 const MAX_BACK = 120
 
+/* Tooltip: opaque ink box. Only thing that floats, so it may carry depth. */
 function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-[10px] bg-ink px-3 py-2 text-xs font-medium text-white shadow-lg">
-      {label && <div className="mb-1 text-white/70">{label}</div>}
+    <div className="rounded-[12px] bg-ink px-3 py-2 text-xs font-medium text-white" style={{ backgroundColor: '#1c1a15' }}>
+      {label && <div className="mb-1 opacity-70">{label}</div>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5">
@@ -35,8 +36,8 @@ function ChartTip({ active, payload, label }) {
 function Empty({ icon, text, to, linkLabel }) {
   return (
     <div className="flex flex-col items-center gap-2 py-8 text-center">
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">{icon}</span>
-      <p className="text-sm text-slate-400">{text}</p>
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-raised text-faint">{icon}</span>
+      <p className="text-sm text-faint">{text}</p>
       {to && (
         <Link to={to} className="text-sm font-medium text-accent hover:underline">{linkLabel}</Link>
       )}
@@ -48,7 +49,7 @@ export default function Dashboard() {
   const { profile } = useAuth()
   const { hide } = useHideBal()
   const incCol = cssVar('--color-up', INCOME_COLOR)
-  const expCol = document.documentElement.classList.contains('dark') ? '#e2e5e8' : EXPENSE_COLOR
+  const expCol = cssVar('--color-chart1', EXPENSE_COLOR)
   const [, bump] = useState(0)
   useEffect(() => {
     const h = () => bump((x) => x + 1)
@@ -84,19 +85,21 @@ export default function Dashboard() {
   const totalBal = accts.reduce((s, a) => s + a.balance, 0)
   const fmtM = (n) => (hide ? 'Rp ••••••' : fmtIDR(n))
 
+  /* Main data element carries the one hue (blue = spending). Income green, ink otherwise. */
   const compare = [
     { name: 'Pemasukan', value: summary?.total_income || 0, fill: incCol },
     { name: 'Pengeluaran', value: summary?.total_expense || 0, fill: expCol }
   ]
 
+  const balance = summary?.balance ?? 0
   const firstName = (profile?.name || 'Kawan').trim().split(/\s+/)[0]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">Halo, {firstName}</h1>
-          <p className="text-sm text-slate-400">Rekap keuangan • {period?.label ?? '…'}</p>
+          <h1>Dashboard</h1>
+          <p className="mt-0.5 text-sm text-sub">Halo {firstName}. {period?.label ?? '…'}</p>
         </div>
         <div className="flex items-center gap-2">
           <PeriodNav
@@ -108,46 +111,47 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="animate-rise">
-          <p className="text-sm text-slate-500">Pemasukan · periode ini</p>
-          <p className="mt-1 text-2xl font-semibold text-up tnum">{fmtM(summary?.total_income)}</p>
-        </Card>
-        <Card className="animate-rise" style={{ animationDelay: '60ms' }}>
-          <p className="text-sm text-slate-500">Pengeluaran · periode ini</p>
-          <p className="mt-1 text-2xl font-semibold text-ink tnum">{fmtM(summary?.total_expense)}</p>
-        </Card>
-        <Card className="animate-rise" style={{ animationDelay: '120ms' }}>
-          <p className="text-sm text-slate-500">Saldo · periode ini</p>
-          <p className={`mt-1 text-2xl font-semibold tnum ${(summary?.balance ?? 0) >= 0 ? 'text-ink' : 'text-down'}`}>
-            {fmtM(summary?.balance)}
-          </p>
-        </Card>
-      </div>
+      {/* Hero answer: net balance leads at 32px, in/out beside it. Biggest number answers the title. */}
+      <Card className="animate-rise bg-ink text-white dark:bg-[#f2f3ef] dark:text-[#101210]">
+        <p className="text-[13px] font-medium opacity-70">Saldo periode ini</p>
+        <p className={`mt-1 text-[32px] font-bold leading-tight tnum ${balance < 0 ? 'text-down' : ''}`}>
+          {fmtM(balance)}
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-[12px] bg-active px-3.5 py-3 dark:bg-[#262923]">
+            <p className="text-[13px] font-medium text-sub">Masuk</p>
+            <p className="mt-0.5 text-lg font-semibold text-up tnum">{fmtM(summary?.total_income)}</p>
+          </div>
+          <div className="rounded-[12px] bg-active px-3.5 py-3 dark:bg-[#262923]">
+            <p className="text-[13px] font-medium text-sub">Keluar</p>
+            <p className="mt-0.5 text-lg font-semibold text-ink tnum">{fmtM(summary?.total_expense)}</p>
+          </div>
+        </div>
+      </Card>
 
-      <Card className="animate-rise" style={{ animationDelay: '120ms' }}>
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Saldo per akun</h2>
+      <Card className="animate-rise" style={{ animationDelay: '60ms' }}>
+        <h2 className="mb-1">Saldo per akun</h2>
         {accts.length === 0 ? (
           <Empty icon={<Wallet size={18} />} text="Belum ada rekening." to="/accounts" linkLabel="Tambah rekening" />
         ) : (
           <>
-            <ul className="divide-y divide-slate-100">
+            <ul className="space-y-1">
               {accts.map((r) => (
-                <li key={r.account.id} className="flex items-center justify-between py-3">
-                  <span className="flex items-center gap-3 text-sm">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.account.color }} />
-                    {r.account.name}
-                    <span className="text-xs text-slate-400">({r.account.type === 'cash' ? 'Tunai' : r.account.type === 'ewallet' ? 'E-Wallet' : 'Bank'})</span>
+                <li key={r.account.id} className="flex items-center justify-between rounded-[12px] bg-raised px-3.5 py-3 dark:bg-[#1e211c]">
+                  <span className="flex min-w-0 items-center gap-3 text-sm">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: r.account.color }} />
+                    <span className="truncate font-medium text-ink">{r.account.name}</span>
+                    <span className="text-xs text-faint">({r.account.type === 'cash' ? 'Tunai' : r.account.type === 'ewallet' ? 'E-Wallet' : 'Bank'})</span>
                   </span>
-                  <span className={`text-sm font-semibold tnum ${r.balance >= 0 ? 'text-slate-800' : 'text-down'}`}>
+                  <span className={`shrink-0 text-sm font-semibold tnum ${r.balance >= 0 ? 'text-ink' : 'text-down'}`}>
                     {fmtM(r.balance)}
                   </span>
                 </li>
               ))}
             </ul>
-            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 pr-14 md:pr-0">
-              <span className="text-sm font-medium text-slate-500">Total saldo</span>
-              <span className={`text-base font-bold tnum ${totalBal >= 0 ? 'text-slate-900' : 'text-down'}`}>
+            <div className="mt-3 flex items-center justify-between rounded-[12px] bg-active px-3.5 py-3 dark:bg-[#262923]">
+              <span className="text-sm font-medium text-sub">Total saldo</span>
+              <span className={`text-base font-bold tnum ${totalBal >= 0 ? 'text-ink' : 'text-down'}`}>
                 {fmtM(totalBal)}
               </span>
             </div>
@@ -156,15 +160,16 @@ export default function Dashboard() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="animate-rise" style={{ animationDelay: '180ms' }}>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Pemasukan vs pengeluaran</h2>
+        <Card className="animate-rise" style={{ animationDelay: '120ms' }}>
+          <h2>Masuk lawan keluar</h2>
+          <p className="mb-3 text-xs text-faint">Periode {period?.label ?? 'ini'}</p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={compare} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#5c6064' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6e6a5f' }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip content={<ChartTip />} cursor={{ fill: 'rgba(120,130,145,0.08)' }} />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {compare.map((c, i) => <Cell key={i} fill={c.fill} />)}
                 </Bar>
               </BarChart>
@@ -172,8 +177,9 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Card className="animate-rise" style={{ animationDelay: '240ms' }}>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Pengeluaran per kategori</h2>
+        <Card className="animate-rise" style={{ animationDelay: '180ms' }}>
+          <h2>Keluar per kategori</h2>
+          <p className="mb-3 text-xs text-faint">Periode {period?.label ?? 'ini'}</p>
           {expenseByCat.length === 0 ? (
             <Empty icon={<ReceiptText size={18} />} text="Belum ada data pengeluaran periode ini." />
           ) : (
@@ -181,7 +187,7 @@ export default function Dashboard() {
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={expenseByCat} dataKey="total" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                    <Pie data={expenseByCat} dataKey="total" nameKey="name" innerRadius={52} outerRadius={80} paddingAngle={2} strokeWidth={0}>
                       {expenseByCat.map((c, i) => (
                         <Cell key={i} fill={c.category.color} />
                       ))}
@@ -190,14 +196,14 @@ export default function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-0.5">
                 {expenseByCat.map((c) => (
-                  <div key={c.category.id} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.category.color }} />
-                      {c.category.name}
+                  <div key={c.category.id} className="flex items-center justify-between rounded-[8px] px-2 py-1.5 text-sm hover:bg-raised">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.category.color }} />
+                      <span className="truncate">{c.category.name}</span>
                     </span>
-                    <span className="font-medium text-slate-700 tnum">{fmtIDR(c.total)}</span>
+                    <span className="shrink-0 font-medium text-ink tnum">{fmtIDR(c.total)}</span>
                   </div>
                 ))}
               </div>
@@ -206,27 +212,27 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <Card className="animate-rise" style={{ animationDelay: '300ms' }}>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Transaksi terbaru</h2>
-          <Link to="/transactions" className="text-sm font-medium text-accent hover:underline">Lihat semua</Link>
+      <Card className="animate-rise" style={{ animationDelay: '240ms' }}>
+        <div className="mb-2 flex items-center justify-between">
+          <h2>Transaksi terbaru</h2>
+          <Link to="/transactions" className="flex min-h-[44px] items-center text-sm font-medium text-accent hover:underline">Lihat semua</Link>
         </div>
         {recent.length === 0 ? (
           <Empty icon={<ReceiptText size={18} />} text="Belum ada transaksi." to="/transactions" linkLabel="Catat transaksi pertama" />
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="space-y-1">
             {recent.map((t) => (
-              <div key={t.id} className="flex items-center justify-between py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <Badge color="#94a3b8">Tanpa kategori</Badge>}
+              <div key={t.id} className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2.5 hover:bg-raised">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  {t.category ? <Badge color={t.category.color}>{t.category.name}</Badge> : <Badge color="#8a877d">Tanpa kategori</Badge>}
                   {t.account && <Badge color={t.account.color}>{t.account.name}</Badge>}
-                  <span className="text-sm text-slate-600">{t.note || (t.kind === 'income' ? 'Pemasukan' : 'Pengeluaran')}</span>
+                  <span className="w-full truncate text-sm text-sub">{t.note || (t.kind === 'income' ? 'Pemasukan' : t.kind === 'transfer' ? 'Pindah dana' : 'Pengeluaran')}</span>
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <div className={`text-sm font-semibold tnum ${t.kind === 'income' ? 'text-up' : 'text-ink'}`}>
                     {t.kind === 'income' ? '+' : '−'}{fmtIDR(t.amount)}
                   </div>
-                  <div className="text-xs text-slate-400">{t.date}{t.time ? ` · ${t.time}` : ''}</div>
+                  <div className="text-xs text-faint">{t.date}{t.time ? ` · ${t.time}` : ''}</div>
                 </div>
               </div>
             ))}

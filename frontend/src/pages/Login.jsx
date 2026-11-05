@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card } from '../components/ui.jsx'
 import FundyLogo from '../components/FundyLogo.jsx'
 
-const AVATARS = ['#f97316', '#3b82f6', '#ec4899', '#a855f7', '#ef4444', '#14b8a6', '#f59e0b', '#22c55e', '#84cc16', '#64748b']
+const AVATARS = ['#b45309', '#1d5fb6', '#be408c', '#3f6212', '#c4242a', '#2a8798', '#d97706', '#247b50', '#57534e', '#0a3a80']
 
 export function Avatar({ p, size = 24 }) {
   const color = p.avatar_color || AVATARS[p.id % AVATARS.length]
@@ -31,21 +31,21 @@ export default function Login() {
   const [error, setError] = useState('')
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(120%_120%_at_50%_0%,#23272c_0%,#14161a_55%,#101216_100%)] p-6">
-      <Card className="w-full max-w-sm text-center">
+    <div className="flex min-h-svh items-center justify-center bg-paper p-6">
+      <Card className="w-full max-w-sm bg-ink text-center text-white dark:bg-[#f2f3ef] dark:text-[#101210]">
         <div className="flex flex-col items-center">
-          <FundyLogo size={64} mode="dark" className="mb-3 shadow-[0_8px_24px_rgba(0,0,0,0.4)]" />
+          <FundyLogo size={64} mode="dark" className="mb-3" />
           <h1 className="mb-1 text-2xl font-bold">Fundy</h1>
-          <p className="mb-8 text-sm text-slate-500">Masuk dengan akun Google kamu</p>
+          <p className="mb-8 text-sm opacity-70">Masuk dengan akun Google kamu</p>
           <a
             href="/api/auth/google"
             onClick={() => setError('')}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow transition hover:bg-slate-100"
+            className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-[12px] bg-white px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-raised dark:bg-[#101210] dark:text-[#f2f3ef] dark:hover:bg-[#262923]"
           >
             <GoogleIcon />
             Lanjutkan dengan Google
           </a>
-          {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
+          {error && <p className="mt-4 text-sm text-down">{error}</p>}
         </div>
       </Card>
     </div>

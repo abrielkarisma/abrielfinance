@@ -6,13 +6,15 @@ import { useHideBal } from '../context/BalContext.jsx'
 import PeriodNav from '../components/PeriodNav.jsx'
 import { usePeriods } from '../lib/periods.js'
 import {
-  CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
+  CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts'
 
+import { Check } from 'lucide-react'
+
 const cssVar = (n, fb) => (getComputedStyle(document.documentElement).getPropertyValue(n).trim() || fb)
-const INCOME_COLOR = '#2f7a45'
-const EXPENSE_COLOR = '#1b1d1f'
+const INCOME_COLOR = '#247b50'
+const EXPENSE_COLOR = '#1d5fb6'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 const MONTHS_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 const pad = (n) => String(n).padStart(2, '0')
@@ -28,7 +30,7 @@ const TIMELINES = [
 function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-[10px] bg-ink px-3 py-2 text-xs font-medium text-white shadow-lg">
+    <div className="rounded-[12px] bg-ink px-3 py-2 text-xs font-medium text-white" style={{ backgroundColor: '#1c1a15' }}>
       {label && <div className="mb-1 text-white/70">{label}</div>}
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
@@ -205,55 +207,59 @@ export default function Grafik() {
     yearly: 'Rekap tahunan · 5 tahun terakhir'
   }[tl]
 
-  const chip = (on, setOn, colorOn, label) => (
+  const chip = (on, setOn, label) => (
     <button
       onClick={() => setOn((s) => !s)}
-      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-        on ? colorOn : 'border-slate-300 text-slate-500'
+      aria-pressed={on}
+      className={`flex min-h-[44px] items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+        on ? 'chip-active' : 'bg-raised text-sub hover:bg-active'
       }`}
     >
-      {on ? '✓ ' : '○ '}{label}
+      <span className={`flex h-4 w-4 items-center justify-center rounded-full ${on ? 'bg-white/25' : 'bg-active'}`} aria-hidden>
+        {on && <Check size={11} strokeWidth={3} />}
+      </span>
+      {label}
     </button>
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold md:text-2xl">Grafik</h1>
-          <p className="text-sm text-slate-400">Tren keuanganmu · {tlTitle}</p>
+          <h1>Grafik</h1>
+          <p className="mt-0.5 text-sm text-sub">Tren keuanganmu · {tlTitle}</p>
         </div>
 
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="animate-rise">
-          <p className="text-sm text-slate-500">Pemasukan · {selPeriod?.label ?? 'periode ini'}</p>
-          <p className="mt-1 text-2xl font-bold text-up tnum">{hide ? 'Rp •••' : fmtIDR(selSum?.total_income)}</p>
+          <p className="text-sm text-sub">Pemasukan · {selPeriod?.label ?? 'periode ini'}</p>
+          <p className="mt-1 text-2xl font-semibold text-up tnum">{hide ? 'Rp •••' : fmtIDR(selSum?.total_income)}</p>
         </Card>
         <Card className="animate-rise" style={{ animationDelay: '60ms' }}>
-          <p className="text-sm text-slate-500">Pengeluaran · {selPeriod?.label ?? 'periode ini'}</p>
-          <p className="mt-1 text-2xl font-bold text-ink tnum">{hide ? 'Rp •••' : fmtIDR(selSum?.total_expense)}</p>
+          <p className="text-sm text-sub">Pengeluaran · {selPeriod?.label ?? 'periode ini'}</p>
+          <p className="mt-1 text-2xl font-semibold text-ink tnum">{hide ? 'Rp •••' : fmtIDR(selSum?.total_expense)}</p>
         </Card>
       </div>
 
       <Card className="animate-rise">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">{tlTitle}</h2>
+          <h2>{tlTitle}</h2>
           <div className="flex items-center gap-1.5">
-            {chip(showIncome, setShowIncome, 'border-up bg-up-soft text-up', 'Pemasukan')}
-            {chip(showExpense, setShowExpense, 'border-ink bg-neutral-soft text-ink', 'Pengeluaran')}
+            {chip(showIncome, setShowIncome, 'Pemasukan')}
+            {chip(showExpense, setShowExpense, 'Pengeluaran')}
           </div>
         </div>
-        <p className="mb-3 text-xs text-slate-400">Total pemasukan & pengeluaran per {tl === 'daily' ? 'hari ' : tl === 'weekly' ? 'minggu ' : tl === 'monthly' ? 'bulan ' : 'tahun '}dalam rentang timeline. Klik chip untuk tampil/sembunyikan garis.</p>
+        <p className="mb-3 text-xs text-faint">Total pemasukan dan pengeluaran per {tl === 'daily' ? 'hari ' : tl === 'weekly' ? 'minggu ' : tl === 'monthly' ? 'bulan ' : 'tahun '}dalam rentang timeline. Klik chip untuk tampil atau sembunyikan garis.</p>
         <div className="mb-4 flex justify-center">
-          <div className="flex rounded-[10px] border border-slate-300 p-0.5">
+          <div className="flex rounded-[12px] bg-raised p-1 dark:bg-[#1e211c]">
             {TIMELINES.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTl(t.id)}
-                className={`rounded-[8px] px-3 py-1 text-xs font-semibold transition-colors ${
-                  tl === t.id ? 'bg-[#1b1d1f] text-white' : 'text-slate-500 hover:text-slate-700'
+                className={`min-h-[44px] rounded-[8px] px-4 text-xs font-semibold transition-colors ${
+                  tl === t.id ? 'chip-active' : 'text-sub hover:text-ink'
                 }`}
               >
                 {t.label}
@@ -266,14 +272,14 @@ export default function Grafik() {
             <select
               value={dMonth}
               onChange={(e) => setDMonth(Number(e.target.value))}
-              className="h-9 rounded-[10px] border border-[#e6e6e6] bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+              className="min-h-[44px] rounded-[12px] border border-control bg-surface px-2.5 text-xs font-semibold text-ink outline-none transition-colors focus:border-accent"
             >
               {MONTHS_FULL.map((m, i) => <option key={m} value={i}>{m}</option>)}
             </select>
             <select
               value={dYear}
               onChange={(e) => setDYear(Number(e.target.value))}
-              className="h-9 rounded-[10px] border border-[#e6e6e6] bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+              className="min-h-[44px] rounded-[12px] border border-control bg-surface px-2.5 text-xs font-semibold text-ink outline-none transition-colors focus:border-accent"
             >
               {Array.from({ length: 6 }, (_, k) => new Date().getFullYear() - 5 + k).map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -281,20 +287,19 @@ export default function Grafik() {
         )}
         <div className="h-72">
           {loading && series.length === 0 ? (
-            <p className="py-20 text-center text-sm text-slate-400">Memuat…</p>
+            <p className="py-20 text-center text-sm text-faint">Memuat…</p>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickMargin={8} interval="preserveStartEnd" height={30} />
-                <YAxis domain={tDomain} ticks={niceTicks(tMin, tMax)} width={52} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtAxis} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-rule)" />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6e6a5f' }} axisLine={false} tickLine={false} tickMargin={8} interval="preserveStartEnd" height={30} />
+                <YAxis domain={tDomain} ticks={niceTicks(tMin, tMax)} width={52} tick={{ fontSize: 11, fill: '#6e6a5f' }} axisLine={false} tickLine={false} tickFormatter={fmtAxis} />
                 <Tooltip content={<ChartTip />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
                 {showIncome && (
-                  <Line type="monotone" dataKey="income" name="Pemasukan" stroke={incCol} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Line type="linear" dataKey="income" name="Pemasukan" stroke={incCol} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                 )}
                 {showExpense && (
-                  <Line type="monotone" dataKey="expense" name="Pengeluaran" stroke={expCol} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Line type="linear" dataKey="expense" name="Pengeluaran" stroke={expCol} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                 )}
               </LineChart>
             </ResponsiveContainer>
@@ -304,13 +309,13 @@ export default function Grafik() {
 
       <Card className="animate-rise">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">Budget Pengeluaran</h2>
-          <span className="text-xs font-semibold text-slate-500">{selPeriod?.label ?? ''} · klik bar untuk detail</span>
+          <h2>Budget pengeluaran</h2>
+          <span className="text-xs text-sub">{selPeriod?.label ?? ''} · ketuk bar untuk detail</span>
         </div>
         {budgets.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">Belum ada budget diatur. Set budget di menu Kategori.</p>
+          <p className="py-8 text-center text-sm text-faint">Belum ada budget diatur. Atur budget di menu Kategori.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {budgets.map((b) => {
               const pct = b.amount > 0 ? (b.spent / b.amount) * 100 : 0
               const over = pct > 100
@@ -318,30 +323,30 @@ export default function Grafik() {
               const rem = b.amount - b.spent
               return (
                 <button key={b.id} onClick={() => openBudgetDetail(b)}
-                  className="block w-full rounded-xl border border-slate-200 p-3 text-left transition-colors hover:bg-slate-50">
+                  className="block w-full rounded-[12px] bg-raised p-3 text-left transition-colors hover:bg-active dark:bg-[#1e211c]">
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.category.color }} />
-                      {b.category.name}
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: b.category.color }} />
+                      <span className="truncate">{b.category.name}</span>
                     </span>
-                    <span className="text-xs text-slate-500 tnum">
-                      <span className="font-semibold text-slate-700">{hide ? 'Rp •••' : fmtIDR(b.spent)}</span>
+                    <span className="shrink-0 text-xs text-sub tnum">
+                      <span className="font-semibold text-ink">{hide ? 'Rp •••' : fmtIDR(b.spent)}</span>
                       {' / '}{hide ? 'Rp •••' : fmtIDR(b.amount)}
                     </span>
                   </div>
-                  <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full transition-all"
-                      style={{ width: `${width}%`, backgroundColor: over ? '#dc2626' : b.category.color }} />
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-active dark:bg-[#2a2e26]">
+                    <div className="h-full rounded-full transition-transform"
+                      style={{ width: `${width}%`, backgroundColor: over ? '#c4242a' : b.category.color }} />
                   </div>
                   <div className="mt-1.5 flex items-center justify-between text-[11px]">
                     {over ? (
-                      <span className="font-semibold text-rose-600">Lebih {hide ? 'Rp •••' : fmtIDR(-rem)}</span>
+                      <span className="font-semibold text-down">Lebih {hide ? 'Rp •••' : fmtIDR(-rem)}</span>
                     ) : (
-                      <span className={rem === 0 ? 'font-semibold text-amber-600' : 'text-emerald-600'}>
+                      <span className={rem === 0 ? 'font-semibold text-warning' : 'text-up'}>
                         Sisa {hide ? 'Rp •••' : fmtIDR(rem)}
                       </span>
                     )}
-                    <span className={over ? 'font-semibold text-rose-600' : 'text-slate-400'}>{Math.round(pct)}%</span>
+                    <span className={over ? 'font-semibold text-down tnum' : 'text-faint tnum'}>{Math.round(pct)}%</span>
                   </div>
                 </button>
               )
@@ -353,31 +358,31 @@ export default function Grafik() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="animate-rise" style={{ animationDelay: '180ms' }}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-700">Pengeluaran per Kategori</h2>
-            <span className="text-xs font-semibold text-slate-500">{selPeriod?.label ?? ''}</span>
+            <h2>Pengeluaran per kategori</h2>
+            <span className="text-xs text-sub tnum">{selPeriod?.label ?? ''}</span>
           </div>
           {expenseByCat.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-400">Belum ada data pengeluaran periode ini.</p>
+            <p className="py-10 text-center text-sm text-faint">Belum ada data pengeluaran periode ini.</p>
           ) : (
             <>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={expenseByCat} dataKey="total" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2} isAnimationActive={false}>
+                    <Pie data={expenseByCat} dataKey="total" nameKey="name" innerRadius={52} outerRadius={80} paddingAngle={2} strokeWidth={0} isAnimationActive={false}>
                       {expenseByCat.map((c, i) => <Cell key={i} fill={c.category.color} />)}
                     </Pie>
                     <Tooltip content={<ChartTip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-0.5">
                 {expenseByCat.map((c) => (
-                  <div key={c.category.id} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.category.color }} />
-                      {c.category.name}
+                  <div key={c.category.id} className="flex items-center justify-between rounded-[8px] px-2 py-1.5 text-sm hover:bg-raised">
+                    <span className="flex min-w-0 items-center gap-2 text-ink">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.category.color }} />
+                      <span className="truncate">{c.category.name}</span>
                     </span>
-                    <span className="font-medium text-slate-700 tnum">{fmtIDR(c.total)}</span>
+                    <span className="shrink-0 font-medium text-ink tnum">{fmtIDR(c.total)}</span>
                   </div>
                 ))}
               </div>
@@ -387,31 +392,31 @@ export default function Grafik() {
 
         <Card className="animate-rise" style={{ animationDelay: '240ms' }}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-700">Distribusi Saldo per Akun</h2>
-            <span className="text-xs font-semibold text-slate-500">s.d. {selPeriod?.end ?? ''}</span>
+            <h2>Distribusi saldo per akun</h2>
+            <span className="text-xs text-sub tnum">s.d. {selPeriod?.end ?? ''}</span>
           </div>
           {balData.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-400">Belum ada akun.</p>
+            <p className="py-10 text-center text-sm text-faint">Belum ada akun.</p>
           ) : (
             <>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={balData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2} isAnimationActive={false}>
+                    <Pie data={balData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={80} paddingAngle={2} strokeWidth={0} isAnimationActive={false}>
                       {balData.map((d, i) => <Cell key={i} fill={d.color} />)}
                     </Pie>
                     <Tooltip content={<ChartTip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-0.5">
                 {balData.map((d) => (
-                  <div key={d.name} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                      {d.name}
+                  <div key={d.name} className="flex items-center justify-between rounded-[8px] px-2 py-1.5 text-sm hover:bg-raised">
+                    <span className="flex min-w-0 items-center gap-2 text-ink">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
+                      <span className="truncate">{d.name}</span>
                     </span>
-                    <span className="font-medium text-slate-700 tnum">{fmtIDR(d.value)}</span>
+                    <span className="shrink-0 font-medium text-ink tnum">{fmtIDR(d.value)}</span>
                   </div>
                 ))}
               </div>
@@ -424,18 +429,18 @@ export default function Grafik() {
         title={`Detail Budget · ${budgetDetail?.category?.name ?? ''}`}
         subtitle={`Transaksi pengeluaran periode ${selPeriod?.label ?? ''}`}>
         {budgetLoading ? (
-          <p className="py-6 text-center text-sm text-slate-400">Memuat…</p>
+          <p className="py-6 text-center text-sm text-faint">Memuat…</p>
         ) : budgetTx.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">Tidak ada transaksi dalam periode ini.</p>
+          <p className="py-6 text-center text-sm text-faint">Tidak ada transaksi dalam periode ini.</p>
         ) : (
-          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
             {budgetTx.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
-                <div>
-                  <div className="font-medium text-slate-700">{t.note || t.category?.name || 'Tanpa catatan'}</div>
-                  <div className="text-xs text-slate-400">{t.date}{t.time ? ` · ${t.time}` : ''}</div>
+              <div key={t.id} className="flex items-center justify-between gap-2 rounded-[12px] bg-raised px-3 py-2 text-sm dark:bg-[#1e211c]">
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-ink">{t.note || t.category?.name || 'Tanpa catatan'}</div>
+                  <div className="text-xs text-faint tnum">{t.date}{t.time ? ` · ${t.time}` : ''}</div>
                 </div>
-                <span className="font-semibold text-ink tnum">{fmtIDR(t.amount)}</span>
+                <span className="shrink-0 font-semibold text-ink tnum">{fmtIDR(t.amount)}</span>
               </div>
             ))}
           </div>

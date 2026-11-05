@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { errMsg } from '../lib/api.js'
 import { Button, Card, Input, Modal } from '../components/ui.jsx'
-import { Bell, CalendarDays, Check, Repeat } from 'lucide-react'
+import { Bell, CalendarDays, Check, Plus, Repeat } from 'lucide-react'
 import { toast } from '../components/toast.jsx'
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
@@ -10,7 +10,7 @@ const WORKDAYS = [0, 1, 2, 3, 4]
 const emptyForm = { title: '', note: '', days: [], time: '', enabled: true, kind: 'weekly', targetDate: '' }
 const fmtDate = (s) => (s ? new Date(s + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
 const emptyDays = (d) => (d.length === 0 ? 'Setiap hari'
-  : d.length === 5 && WORKDAYS.every((x) => d.includes(x)) ? 'Hari kerja (Sen–Jum)'
+  : d.length === 5 && WORKDAYS.every((x) => d.includes(x)) ? 'Hari kerja (Sen sampai Jum)'
   : d.sort((a, b) => a - b).map((i) => DAYS[i]).join(', '))
 
 export default function Reminders() {
@@ -106,7 +106,7 @@ export default function Reminders() {
 
   const remove = async (r) => {
     if (busy === r.id) return
-    if (!window.confirm(`Hapus pengingat "${r.title}"?`)) return
+    if (!window.confirm(`Hapus pengingat “${r.title}”?`)) return
     setBusy(r.id)
     try {
       await api.delete(`/reminders/${r.id}`)
@@ -124,96 +124,102 @@ export default function Reminders() {
     Notification.requestPermission().then((p) => setNotifPerm(p))
   }
 
+  const segBtn = (active) => `flex min-h-[52px] items-center justify-center gap-1.5 rounded-[8px] px-3 text-xs font-semibold transition-colors ${
+    active ? 'chip-active' : 'text-sub hover:text-ink'}`
+
+  const dayChip = (active) => `flex min-h-[44px] items-center rounded-full px-3.5 text-xs font-medium transition-colors ${
+    active ? 'chip-active' : 'bg-raised text-sub hover:bg-active dark:bg-[#1e211c]'}`
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Pengingat</h1>
-        <Button onClick={openAdd}>+ Tambah Pengingat</Button>
+        <h1>Pengingat</h1>
+        <Button onClick={openAdd}><Plus size={16} /> Tambah pengingat</Button>
       </div>
 
-      <Card>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">Terjadwal hari ini</h2>
+      <Card className="p-2 sm:p-3">
+        <div className="mb-1 flex min-h-[44px] flex-wrap items-center justify-between gap-2 px-1">
+          <h2>Terjadwal hari ini</h2>
           {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
             <button
               onClick={requestPerm}
-              className="rounded-full border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+              className="flex min-h-[44px] items-center rounded-full bg-raised px-3.5 text-xs font-semibold text-ink transition-colors hover:bg-active"
             >
               Aktifkan notifikasi browser
             </button>
           )}
         </div>
         {dueToday.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">Tidak ada pengingat untuk hari ini.</p>
+          <p className="py-6 text-center text-sm text-faint">Tidak ada pengingat untuk hari ini.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="space-y-1">
             {dueToday.map((r) => (
-              <li key={r.id} className="flex items-center justify-between py-2.5">
-                <div>
-                  <div className="text-sm font-medium text-slate-800">{r.title}</div>
-                  {r.note && <div className="text-xs text-slate-500">{r.note}</div>}
+              <li key={r.id} className="flex items-center justify-between gap-2 rounded-[12px] bg-raised px-3.5 py-3 dark:bg-[#1e211c]">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-ink">{r.title}</div>
+                  {r.note && <div className="truncate text-xs text-sub">{r.note}</div>}
                 </div>
                 {r.time && (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{r.time}</span>
+                  <span className="shrink-0 rounded-full bg-active px-2.5 py-1 text-xs font-semibold text-ink tnum dark:bg-[#2a2e26]">{r.time}</span>
                 )}
               </li>
             ))}
           </ul>
         )}
         {notifPerm !== 'unsupported' && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-faint">
             {notifPerm === 'granted' ? 'Notifikasi browser aktif.' : 'Notifikasi muncul selama aplikasi terbuka.'}
           </p>
         )}
       </Card>
 
-      <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Semua Pengingat</h2>
-          <span className="text-xs text-slate-400">{list.length} item</span>
+      <Card className="p-2 sm:p-3">
+        <div className="mb-1 flex min-h-[44px] items-center justify-between px-1">
+          <h2>Semua pengingat</h2>
+          <span className="text-xs text-faint tnum">{list.length} item</span>
         </div>
         {list.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">
+          <p className="py-8 text-center text-sm text-faint">
             Belum ada pengingat. Buat satu untuk mulai.
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="space-y-1">
             {list.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-medium ${r.enabled ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
+              <li key={r.id} className="rounded-[12px] bg-raised px-3.5 py-3 dark:bg-[#1e211c]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <span className={`truncate text-sm font-medium ${r.enabled ? 'text-ink' : 'text-faint line-through'}`}>
                       {r.title}
                     </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                      {r.kind === 'date' ? `Sekali · ${fmtDate(r.target_date)}` : emptyDays(r.days_of_week)}
+                    <span className="whitespace-nowrap rounded-full bg-active px-2 py-0.5 text-[11px] font-medium text-sub dark:bg-[#2a2e26]">
+                      {r.kind === 'date' ? `Sekali, ${fmtDate(r.target_date)}` : emptyDays(r.days_of_week)}
                     </span>
                     {r.time && (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                      <span className="whitespace-nowrap rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-ink tnum">
                         {r.time}
                       </span>
                     )}
                   </div>
-                  {r.note && <div className="mt-0.5 text-xs text-slate-500">{r.note}</div>}
+                  <div className="flex shrink-0 items-center">
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-1.5 px-1 text-xs text-sub">
+                      <input
+                        type="checkbox"
+                        checked={r.enabled}
+                        disabled={busy === r.id}
+                        onChange={() => toggleEnabled(r)}
+                        className="h-4 w-4 accent-[#1d5fb6]"
+                      />
+                      Aktif
+                    </label>
+                    <button className="flex min-h-[44px] items-center rounded-[8px] px-2 text-xs font-medium text-accent hover:bg-active" onClick={() => openEdit(r)}>
+                      Edit
+                    </button>
+                    <button className="flex min-h-[44px] items-center rounded-[8px] px-2 text-xs font-medium text-down hover:bg-down-soft" onClick={() => remove(r)}>
+                      Hapus
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={r.enabled}
-                      disabled={busy === r.id}
-                      onChange={() => toggleEnabled(r)}
-                      className="h-4 w-4 accent-emerald-600"
-                    />
-                    Aktif
-                  </label>
-                  <button className="text-xs font-medium text-emerald-600 hover:underline" onClick={() => openEdit(r)}>
-                    Edit
-                  </button>
-                  <button className="text-xs font-medium text-rose-600 hover:underline" onClick={() => remove(r)}>
-                    Hapus
-                  </button>
-                </div>
+                {r.note && <div className="mt-0.5 truncate text-xs text-sub">{r.note}</div>}
               </li>
             ))}
           </ul>
@@ -223,7 +229,7 @@ export default function Reminders() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? 'Edit Pengingat' : 'Tambah Pengingat'}
+        title={editing ? 'Edit pengingat' : 'Tambah pengingat'}
         subtitle={editing ? 'Perbarui jadwal pengingat.' : 'Jadwalkan pengingat rutin.'}
         icon={<Bell size={22} strokeWidth={2} />}
       >
@@ -242,55 +248,60 @@ export default function Reminders() {
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-slate-600">Jenis jadwal</span>
-            <div className="mb-3 grid grid-cols-2 gap-2">
+            <span className="mb-1.5 block text-sm font-medium text-sub">Jenis jadwal</span>
+            <div className="mb-3 grid grid-cols-2 gap-1 rounded-[12px] bg-raised p-1 dark:bg-[#1e211c]">
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, kind: 'weekly' }))}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${form.kind === 'weekly' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50'}`}
+                aria-pressed={form.kind === 'weekly'}
+                className={segBtn(form.kind === 'weekly')}
               >
-                <Repeat size={15} /> Ulangi setiap minggu
+                <Repeat size={15} /> Setiap minggu
               </button>
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, kind: 'date' }))}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${form.kind === 'date' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50'}`}
+                aria-pressed={form.kind === 'date'}
+                className={segBtn(form.kind === 'date')}
               >
                 <CalendarDays size={15} /> Tanggal tertentu
               </button>
             </div>
             {form.kind === 'weekly' ? (
               <>
-                <span className="mb-1.5 block text-sm font-medium text-slate-600">Ulangi pada hari</span>
-                <div className="mb-2 flex flex-wrap gap-2">
+                <span className="mb-1.5 block text-sm font-medium text-sub">Ulangi pada hari</span>
+                <div className="mb-2 flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, days: [] }))}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.length === 0 ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                    aria-pressed={form.days.length === 0}
+                    className={dayChip(form.days.length === 0)}
                   >
                     Setiap hari
                   </button>
                   <button
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, days: [...WORKDAYS] }))}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.length === 5 && WORKDAYS.every((d) => form.days.includes(d)) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                    aria-pressed={form.days.length === 5 && WORKDAYS.every((d) => form.days.includes(d))}
+                    className={dayChip(form.days.length === 5 && WORKDAYS.every((d) => form.days.includes(d)))}
                   >
                     Hari kerja
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {DAYS.map((d, i) => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => toggleDay(i)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${form.days.includes(i) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 text-slate-500'}`}
+                      aria-pressed={form.days.includes(i)}
+                      className={dayChip(form.days.includes(i))}
                     >
                       {d}
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-slate-400">Kosongkan semua = setiap hari.</p>
+                <p className="mt-1.5 text-xs text-faint">Kosongkan semua sama dengan setiap hari.</p>
               </>
             ) : (
               <Input
@@ -307,16 +318,16 @@ export default function Reminders() {
             value={form.time}
             onChange={(e) => setForm({ ...form, time: e.target.value })}
           />
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-ink">
             <input
               type="checkbox"
               checked={form.enabled}
               onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-              className="h-4 w-4 accent-emerald-600"
+              className="h-4 w-4 accent-[#1d5fb6]"
             />
             Aktifkan pengingat ini
           </label>
-          {err && <p className="text-sm text-rose-600">{err}</p>}
+          {err && <p className="text-sm text-down">{err}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
             <Button type="submit" loading={saving}><Check size={16} /> Simpan</Button>

@@ -195,7 +195,7 @@ export default function LiveChat() {
       const { data } = await api.post('/livechat', { message: text, history: msgs })
       setMsgs((m) => [...m, { role: 'assistant', content: data.reply }])
     } catch (e) {
-      setMsgs((m) => [...m, { role: 'assistant', content: '⚠️ ' + (e?.response?.data?.detail || 'Bot tidak terjangkau. Coba lagi.') }])
+      setMsgs((m) => [...m, { role: 'assistant', content: 'Bot tidak terjangkau. Coba lagi. (' + (e?.response?.data?.detail || 'koneksi gagal') + ')' }])
     } finally {
       setBusy(false)
       saveDraft()
@@ -205,17 +205,17 @@ export default function LiveChat() {
   const bubbleColor = profile?.avatar_color || '#64748b'
 
   const renderHeader = (title, onClose) => (
-    <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-      <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full ring-1 ring-black/5" style={{ backgroundColor: bubbleColor }}>
+    <div className="flex items-center gap-3 bg-raised px-4 py-3 dark:bg-[#1e211c]">
+      <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full " style={{ backgroundColor: bubbleColor }}>
         <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
       </span>
       <div className="leading-tight">
         <div className="text-sm font-semibold text-ink">{title}</div>
-        <div className="flex items-center gap-1 text-xs text-emerald-600">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> online
+        <div className="flex items-center gap-1 text-xs text-up">
+          <span className="h-1.5 w-1.5 rounded-full bg-up" /> online
         </div>
       </div>
-      <button onClick={() => setOpen(false)} className="ml-auto rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Tutup">
+      <button onClick={() => setOpen(false)} className="ml-auto rounded-lg p-1.5 text-faint hover:bg-raised" aria-label="Tutup">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
@@ -226,20 +226,20 @@ export default function LiveChat() {
       <button
         onClick={() => setOpen(false)}
         aria-label="Tutup"
-        className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+        className="absolute right-3 top-3 rounded-lg p-1.5 text-faint hover:bg-raised"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
-      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full shadow-lg ring-1 ring-black/5" style={{ backgroundColor: bubbleColor }}>
+      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full" style={{ backgroundColor: bubbleColor }}>
         <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
       </div>
       <div>
         <div className="text-base font-bold text-ink">Boci</div>
-        <div className="text-xs text-slate-400">Asisten keuangan pribadimu</div>
+        <div className="text-xs text-faint">Asisten keuangan pribadimu</div>
       </div>
       <button
         onClick={startNewChat}
-        className="mt-1 flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white shadow-md transition-transform active:scale-95"
+        className="mt-1 flex min-h-[44px] items-center gap-2 rounded-full px-5 text-sm font-medium text-white transition-transform active:scale-95"
         style={{ backgroundColor: bubbleColor }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -247,7 +247,7 @@ export default function LiveChat() {
       </button>
       <button
         onClick={openHistory}
-        className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-ink"
+        className="flex min-h-[44px] items-center gap-1.5 text-xs font-medium text-sub hover:text-ink"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
         Riwayat chat
@@ -258,10 +258,10 @@ export default function LiveChat() {
   const renderChat = () => (
     <>
       {renderHeader('Boci', () => null)}
-      <div ref={bodyRef} className="flex-1 space-y-2.5 overflow-y-auto bg-slate-50 px-4 py-3">
+      <div ref={bodyRef} className="flex-1 space-y-2.5 overflow-y-auto bg-raised px-4 py-3">
         {msgs.length === 0 && (
-          <div className="text-xs text-slate-400">
-            Halo {profile?.name}! Aku Boci 🤖 Tanya atau catat pengeluaran di sini. Contoh: <i>"catat gofood 25000 jam 12:30"</i>
+          <div className="text-xs text-faint">
+            Halo {profile?.name}! Aku Boci. Tanya atau catat pengeluaran di sini. Contoh: <i>"catat gofood 25000 jam 12:30"</i>
           </div>
         )}
         {msgs.map((m, i) => (
@@ -269,7 +269,7 @@ export default function LiveChat() {
             <div
               className={cn(
                 'max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed',
-                m.role === 'user' ? 'rounded-br-md text-white' : 'rounded-bl-md border border-slate-200 bg-white text-ink'
+                m.role === 'user' ? 'rounded-br-md text-white' : 'rounded-bl-md bg-raised text-ink'
               )}
               style={m.role === 'user' ? { backgroundColor: bubbleColor } : undefined}
             >
@@ -279,27 +279,27 @@ export default function LiveChat() {
         ))}
         {busy && (
           <div className="flex justify-start">
-            <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3 py-2">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 [animation-delay:150ms]" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-400 [animation-delay:300ms]" />
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-raised px-3 py-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-control" />
+              <span className="h-1.5 w-1.5 rounded-full bg-control [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-control [animation-delay:300ms]" />
             </div>
           </div>
         )}
       </div>
 
-      <div className="relative border-t border-slate-100 px-3 py-2.5">
+      <div className="relative bg-raised px-3 py-2.5 dark:bg-[#1e211c]">
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute bottom-full left-1 z-20 mb-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="absolute bottom-full left-1 z-20 mb-2 w-48 overflow-hidden rounded-[12px] bg-surface dark:bg-[#22251f]">
               {MENU_ITEMS.map((item) => (
                 <button
                   key={item.key}
                   onClick={() => item.key === 'close' ? closeChat() : item.key === 'new' ? startNewChat() : openHistory()}
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-ink"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-sub hover:bg-raised hover:text-ink"
                 >
-                  <span className="text-slate-400">{item.icon}</span>
+                  <span className="text-faint">{item.icon}</span>
                   {item.label}
                 </button>
               ))}
@@ -310,7 +310,7 @@ export default function LiveChat() {
           <button
             onClick={() => setMenuOpen((m) => !m)}
             aria-label="Menu"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-ink"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-faint hover:bg-raised hover:text-ink"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5h.01M12 12h.01M12 19h.01"/></svg>
           </button>
@@ -320,13 +320,13 @@ export default function LiveChat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send()}
             placeholder="Tulis pesan…"
-            className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-accent"
+            className="min-h-[44px] flex-1 rounded-full bg-surface px-4 py-2 text-sm text-ink outline-none focus:border-accent dark:bg-[#171916]"
           />
           <button
             onClick={send}
             disabled={busy || !input.trim()}
             aria-label="Kirim"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-95 disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-95 disabled:opacity-40"
             style={{ backgroundColor: bubbleColor }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
@@ -339,35 +339,35 @@ export default function LiveChat() {
   const renderHistory = () => (
     <>
       {renderHeader('Riwayat chat', () => null)}
-      <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-3">
+      <div className="flex-1 overflow-y-auto bg-raised px-3 py-3">
         <button
           onClick={startNewChat}
-          className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-medium text-slate-500 hover:border-accent hover:text-accent"
+          className="mb-2 flex w-full items-center justify-center gap-2 rounded-[12px] bg-raised py-2.5 text-sm font-medium text-sub hover:bg-active hover:text-ink"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Chat baru
         </button>
         {sessionsLoading ? (
-          <div className="py-6 text-center text-xs text-slate-400">Memuat…</div>
+          <div className="py-6 text-center text-xs text-faint">Memuat…</div>
         ) : sessions.length === 0 ? (
-          <div className="py-6 text-center text-xs text-slate-400">Belum ada riwayat chat</div>
+          <div className="py-6 text-center text-xs text-faint">Belum ada riwayat chat</div>
         ) : (
           sessions.map((s) => (
             <button
               key={s.id}
               onClick={() => openDetail(s.id)}
-              className="mb-1.5 flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left hover:shadow-sm"
+              className="mb-1.5 flex w-full items-center gap-3 rounded-xl bg-raised px-3 py-2.5 text-left hover:bg-active"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ backgroundColor: bubbleColor }}>
                 <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-ink">{s.title}</span>
-                <span className="block text-xs text-slate-400">
+                <span className="block text-xs text-faint">
                   {s.message_count} pesan · {s.created_at ? new Date(s.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : ''}
                 </span>
               </span>
-              <svg width="14" height="14" className="shrink-0 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              <svg width="14" height="14" className="shrink-0 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </button>
           ))
         )}
@@ -378,13 +378,13 @@ export default function LiveChat() {
   const renderDetail = () => (
     <>
       {renderHeader(detail?.title || 'Riwayat', () => setView('history'))}
-      <div ref={bodyRef} className="flex-1 space-y-2.5 overflow-y-auto bg-slate-50 px-4 py-3">
+      <div ref={bodyRef} className="flex-1 space-y-2.5 overflow-y-auto bg-raised px-4 py-3">
         {(detail?.messages || []).map((m, i) => (
           <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
             <div
               className={cn(
                 'max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed',
-                m.role === 'user' ? 'rounded-br-md text-white' : 'rounded-bl-md border border-slate-200 bg-white text-ink'
+                m.role === 'user' ? 'rounded-br-md text-white' : 'rounded-bl-md bg-raised text-ink'
               )}
               style={m.role === 'user' ? { backgroundColor: bubbleColor } : undefined}
             >
@@ -392,7 +392,7 @@ export default function LiveChat() {
             </div>
           </div>
         ))}
-        <div className="pt-1 text-center text-[11px] text-slate-400">— Akhir riwayat chat —</div>
+        <div className="pt-1 text-center text-[11px] text-faint">— Akhir riwayat chat —</div>
       </div>
     </>
   )
@@ -406,7 +406,7 @@ export default function LiveChat() {
         onClick={(e) => { if (e.detail > 0 && !movedRef.current) toggleOpen() }}
         aria-label="Boci chat"
         title="Boci — asisten keuangan"
-        className="fixed left-4 z-40 flex h-14 w-14 cursor-grab touch-none items-center justify-center overflow-hidden rounded-full shadow-xl ring-1 ring-black/10 active:cursor-grabbing"
+        className="fixed left-4 z-40 flex h-14 w-14 cursor-grab touch-none items-center justify-center overflow-hidden rounded-full  active:cursor-grabbing"
         style={{ top: fabTop, transform: fabTransform, backgroundColor: bubbleColor }}
       >
         <img src="/boci.png" alt="Boci" className="h-full w-full object-cover" />
@@ -414,7 +414,7 @@ export default function LiveChat() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed left-4 top-1/2 z-40 flex h-[480px] w-[calc(100vw-2rem)] max-w-sm -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="fixed left-4 top-1/2 z-40 flex h-[480px] w-[calc(100vw-2rem)] max-w-sm -translate-y-1/2 flex-col overflow-hidden rounded-[20px] bg-surface dark:bg-[#171916]">
           {view === 'splash' && renderSplash()}
           {view === 'chat' && renderChat()}
           {view === 'history' && renderHistory()}
