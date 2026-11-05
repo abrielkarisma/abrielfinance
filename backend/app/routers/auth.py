@@ -203,11 +203,25 @@ def google_callback(code: str, request: FastAPIRequest, db: Session = Depends(ge
         # Fallback: cari by email (untuk migrasi pas google_sub belum terikat)
         profile = db.query(User).filter(User.email == email).first()
 
+    created_new = False
     if not profile:
-        raise HTTPException(
-            status_code=403,
-            detail="Akun Google belum terhubung ke profil mana pun",
+        # Open register: Google account baru -> bikin profil baru + seed kategori & akun default
+        name = (info.get("name") or "").strip() or email or "Pengguna baru"
+        import bcrypt as _bcrypt
+        import os as _os
+        profile = User(
+            name=name[:100],
+            pin_hash=_bcrypt.hashpw(_os.urandom(24).hex().encode(), _bcrypt.gensalt()).decode(),
+            google_sub=google_sub,
+            email=email,
+            avatar_color="#64748b",
+            is_admin=False,
         )
+        db.add(profile)
+        db.flush()  # dapatkan profile.id untuk FK seed
+        _seed_default_categories(db, profile)
+        _seed_default_account(db, profile)
+        created_new = True
 
     if not profile.google_sub:
         profile.google_sub = google_sub
