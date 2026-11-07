@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..db import get_db
 from ..models import Account, Transaction, User
-from ..periods import period_containing, periods_list
+from ..periods import period_containing, periods_list, today_wib
 from ..schemas import (
     AccountBalance,
     AccountOut,
@@ -26,7 +26,7 @@ def _period_range(
 ) -> tuple[date, date]:
     if start is not None and end is not None:
         return start, end
-    s, e = period_containing(date.today(), user.salary_day, user.salary_end_of_month)
+    s, e = period_containing(today_wib(), user.salary_day, user.salary_end_of_month)
     return start or s, end or e
 
 
@@ -36,7 +36,7 @@ def periods(
     count: int = Query(6, ge=1, le=120),
     user: User = Depends(get_current_user),
 ):
-    as_of = as_of or date.today()
+    as_of = as_of or today_wib()
     rows = periods_list(as_of, count, user.salary_day, user.salary_end_of_month)
     return PeriodListOut(
         periods=[

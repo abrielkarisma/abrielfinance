@@ -12,7 +12,7 @@ Mode:
 
 Gajian = AWAL periode.  Setiap periode bersifat [start, end) (end eksklusif).
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import calendar
 
@@ -21,6 +21,11 @@ MONTHS = [
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
     "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
 ]
+
+
+def today_wib() -> date:
+    """Tanggal 'hari ini' dalam zona WIB (UTC+7), apa pun TZ server."""
+    return datetime.now(timezone(timedelta(hours=7))).date()
 
 
 def is_calendar(salary_day: int | None, end_of_month: bool) -> bool:
